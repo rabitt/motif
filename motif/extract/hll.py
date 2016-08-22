@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""HLL method for extracting contours.
+"""
 import numpy as np
 import csv
 import os
@@ -5,6 +8,33 @@ import tempfile as tmp
 
 
 def hll(audio_fpath, recompute=True, clean=True):
+    """Compute contours using Harmonic Locked Loops.
+    This calls a binary in the background, which creates a csv file.
+    The csv file is loaded into memory and the file is deleted, unless
+    clean=False. When recompute=False, this will first look for an existing
+    precomputed contour file and if successful will load it directly.
+
+    Parameters
+    ----------
+    audio_fpath : str
+        Path to audio file.
+    recompute : bool, default=True
+        If true, recompute contours from audio every time.
+        If false, look for a pre-computed contour file.
+    clean : bool, default=True
+        If True, removes the contour file upon success.
+
+    Returns
+    -------
+    c_numbers : np.array
+        Array of contour numbers
+    c_times : np.array
+        Array of contour times
+    c_freqs : np.array
+        Array of contour frequencies
+    c_sal : np.array
+        Array of contour saliences
+    """
     output_path = tmp.NamedTemporaryFile('csv')
     if recompute or not os.path.exists(output_path):
         args = [
@@ -25,6 +55,25 @@ def hll(audio_fpath, recompute=True, clean=True):
 
 
 def load_contours(fpath):
+    """ Load contour data from an HLL csv file.
+
+    Parameters
+    ----------
+    fpath : str
+        Path to output csv file.
+
+    Returns
+    -------
+    index : np.array
+        Array of contour numbers
+    times : np.array
+        Array of contour times
+    freqs : np.array
+        Array of contour frequencies
+    contour_sal : np.array
+        Array of contour saliences
+
+    """
     index = []
     times = []
     freqs = []

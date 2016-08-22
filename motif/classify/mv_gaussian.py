@@ -1,4 +1,5 @@
-""" Functions for doing scoring based on multivariate gaussian as in Meloida
+# -*- coding: utf-8 -*-
+""" Score based on multivariate gaussian as in Meloida
 """
 import numpy as np
 from scipy.stats import boxcox

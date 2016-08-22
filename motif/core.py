@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
+""" Core methods
+"""
 import numpy as np
 import csv
-import os
 import mir_eval
 import matplotlib.pyplot as plt
 import seaborn as sns

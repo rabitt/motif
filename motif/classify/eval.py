@@ -1,4 +1,6 @@
-# code for scoring output of a classifier
+# -*- coding: utf-8 -*-
+"""Evaluate the output of a classifier.
+"""
 from sklearn import metrics
 
 def clf_metrics(p_train, p_test, y_train, y_test):

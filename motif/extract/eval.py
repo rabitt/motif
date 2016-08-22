@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" Evaluate the output of contour extraction
+"""
 from mir_eval import multipitch
 
 

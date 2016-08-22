@@ -1,4 +1,6 @@
-# functions for training and predicting contour labels
+# -*- coding: utf-8 -*-
+""" Classification using a random forrest
+"""
 from sklearn.ensemble import RandomForestClassifier as RFC
 from sklearn import cross_validation
 import numpy as np

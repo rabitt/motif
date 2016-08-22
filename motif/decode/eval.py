@@ -1,4 +1,6 @@
-
+# -*- coding: utf-8 -*-
+""" Evaluate the output of the decoder.
+"""
 #TODO: actually write this
 def score():
     # Generate melody output using predictions

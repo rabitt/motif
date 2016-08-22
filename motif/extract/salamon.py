@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Salamon's method for extracting contours
+"""
 import csv
 import numpy as np
 import os
@@ -6,6 +9,33 @@ SALAMON_CONTOUR_STRING = "vamp_melodia-contours_melodia-contours_contoursall"
 
 
 def salamon(audio_fpath, recompute=True, clean=True):
+    """Compute contours as in Justin Salamon's melodia.
+    This calls a vamp plugin in the background, which creates a csv file.
+    The csv file is loaded into memory and the file is deleted, unless
+    clean=False. When recompute=False, this will first look for an existing
+    precomputed contour file and if successful will load it directly.
+
+    Parameters
+    ----------
+    audio_fpath : str
+        Path to audio file.
+    recompute : bool, default=True
+        If true, recompute contours from audio every time.
+        If false, look for a pre-computed contour file.
+    clean : bool, default=True
+        If True, removes the contour file upon success.
+
+    Returns
+    -------
+    c_numbers : np.array
+        Array of contour numbers
+    c_times : np.array
+        Array of contour times
+    c_freqs : np.array
+        Array of contour frequencies
+    c_sal : np.array
+        Array of contour saliences
+    """
     input_file_name = os.path.basename(audio_fpath)
     output_file_name = "{}_{}.csv".format(
         input_file_name.split('.')[0], SALAMON_CONTOUR_STRING
@@ -23,7 +53,7 @@ def salamon(audio_fpath, recompute=True, clean=True):
     if not os.path.exists(output_path):
         raise IOError("Unable to find vamp output file {}".format(output_path))
 
-    c_numbers, c_times, c_freqs, c_sal = load_salamon_contours(output_path)
+    c_numbers, c_times, c_freqs, c_sal = load_contours(output_path)
 
     if clean:
         os.remove(output_path)
@@ -31,9 +61,8 @@ def salamon(audio_fpath, recompute=True, clean=True):
     return c_numbers, c_times, c_freqs, c_sal
 
 
-def load_salamon_contours(fpath):
+def load_contours(fpath):
     """ Load contour data from vamp output csv file.
-    Initializes DataFrame to have all future columns.
 
     Parameters
     ----------
