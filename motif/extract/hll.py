@@ -5,56 +5,58 @@ import numpy as np
 import csv
 import os
 import tempfile as tmp
+from motif.core import ContourExtractor
+from motif.core import Contours
 
 
-def hll(audio_fpath, recompute=True, clean=True):
-    """Compute contours using Harmonic Locked Loops.
-    This calls a binary in the background, which creates a csv file.
-    The csv file is loaded into memory and the file is deleted, unless
-    clean=False. When recompute=False, this will first look for an existing
-    precomputed contour file and if successful will load it directly.
+class HLL(ContourExtractor):
 
-    Parameters
-    ----------
-    audio_fpath : str
-        Path to audio file.
-    recompute : bool, default=True
-        If true, recompute contours from audio every time.
-        If false, look for a pre-computed contour file.
-    clean : bool, default=True
-        If True, removes the contour file upon success.
+    @classmethod
+    def get_id(cls):
+        """Identifier of this extractor."""
+        return "hll"
 
-    Returns
-    -------
-    c_numbers : np.array
-        Array of contour numbers
-    c_times : np.array
-        Array of contour times
-    c_freqs : np.array
-        Array of contour frequencies
-    c_sal : np.array
-        Array of contour saliences
-    """
-    output_path = tmp.NamedTemporaryFile('csv')
-    if recompute or not os.path.exists(output_path):
-        args = [
-            "run_hll", 
-            "{}".format(audio_fpath), "{}".format(output_path.name)
-        ]
-        os.system(' '.join(args))
+    def compute_contours(self):
+        """Compute contours using Harmonic Locked Loops.
+        This calls a binary in the background, which creates a csv file.
+        The csv file is loaded into memory and the file is deleted, unless
+        clean=False. When recompute=False, this will first look for an existing
+        precomputed contour file and if successful will load it directly.
 
-    if not os.path.exists(output_path):
-        raise IOError("Unable to find HLL output file {}".format(output_path))
+        Returns
+        -------
+        Instance of Contours object
+        """
+        if self.recompute:
+            output_file_object = tmp.NamedTemporaryFile('csv')
+            output_path = output_file_object.name
+        else:
+            input_name = os.path.basename(self.audio_filepath)
+            input_dir = os.path.dirname(self.audio_filepath)
+            output_name = "{}_HLL_contours.csv".format(input_name.split('.'))
+            output_path = os.path.join(input_dir, output_name)
 
-    c_numbers, c_times, c_freqs, c_sal = load_contours(output_path)
+        if not os.path.exists(output_path):
+            args = [
+                "run_hll", 
+                "{}".format(self.audio_filepath), "{}".format(output_path.name)
+            ]
+            os.system(' '.join(args))
 
-    if clean:
-        os.remove(output_path)
+        if not os.path.exists(output_path):
+            raise IOError(
+                "Unable to find HLL output file {}".format(output_path)
+            )
 
-    return c_numbers, c_times, c_freqs, c_sal
+        c_numbers, c_times, c_freqs, c_sal = _load_contours(output_path)
+
+        if self.clean:
+            os.remove(output_path)
+
+        return Contours(c_numbers, c_times, c_freqs, c_sal)
 
 
-def load_contours(fpath):
+def _load_contours(fpath):
     """ Load contour data from an HLL csv file.
 
     Parameters

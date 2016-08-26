@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set()
 
-from . import extract as C
 from . import features as F
 
 
@@ -42,7 +41,7 @@ class Contours(object):
         Mapping from contour number to computed classifier score
 
     '''
-    def __init__(self, audio_fpath, method, recompute=True, clean=True):
+    def __init__(self, index, times, freqs, salience):
         '''
         Parameters
         ----------
@@ -60,56 +59,35 @@ class Contours(object):
             If True, removes any temporary files created. If False, keeps files.
 
         '''
-        # attributes from constructor
-        self.audio_fpath = audio_fpath
-        self.method = method
-        self.recompute = recompute
-        self.clean = clean
 
         # contour attributes
-        self.nums = None
-        self.index_mapping = None
-        self.index = None
-        self.times = None
-        self.freqs = None
-        self.salience = None
+        self.index = index
+        self.times = times
+        self.freqs = freqs
+        self.salience = salience/np.max(salience)
 
-        # compute contours
-        self._compute_contours()
-        # create the index mapping
-        self._set_index_mapping()
+        self.nums = self._compute_nums()
+        self.index_mapping = self._compute_index_mapping()
 
         # computed attributes
-        self.features = None
-        self.labels = None
-        self.overlaps = None
-        self.scores = None
+        self._features = None
+        self._labels = None
+        self._overlaps = None
+        self._scores = None
 
-    def _compute_contours(self):
-        '''Compute contours for a track based on selected method.
+    def _compute_nums(self):
+        '''Compute the set of contour index numbers
         '''
-        if self.method == 'hll':
-            c_numbers, c_times, c_freqs, c_sal = C.hll(
-                self.audio_fpath, recompute=self.recompute, clean=self.clean
-            )
-        elif self.method == 'salamon':
-            c_numbers, c_times, c_freqs, c_sal = C.salamon(
-                self.audio_fpath, recompute=self.recompute, clean=self.clean
-            )
+        return list(set(self.index))
 
-        self.index = c_numbers
-        self.times = c_times
-        self.freqs = c_freqs
-        self.salience = c_sal/np.max(c_sal)
-
-    def _set_index_mapping(self):
+    def _compute_index_mapping(self):
         '''Computes the mapping from contour numbers to indices.
         '''
-        self.nums = set(self.index)
-        self.index_mapping = dict.fromkeys(self.nums)
+        index_mapping = dict.fromkeys(self.nums)
         for num in self.nums:
-            self.index_mapping[num] = np.where(
-                self.index == num)[0]
+            idxs = np.where(self.index == num)[0]
+            index_mapping[num] = range(idxs[0], idxs[-1] + 1)
+        return index_mapping
 
     def contour_times(self, index):
         '''Get the time stamps for a particular contour number.
@@ -189,8 +167,8 @@ class Contours(object):
             overlaps[i] = res['Overall Accuracy']
             labels[i] = 1*(overlaps[i] > overlap_threshold)
 
-        self.labels = labels
-        self.overlaps = overlaps
+        self._labels = labels
+        self._overlaps = overlaps
 
     def compute_features(self):
         '''Compute features for each contour.
@@ -205,7 +183,7 @@ class Contours(object):
             )
             features[i] = cft.get_features()
 
-        self.features = features
+        self._features = features
 
     def plot(self, style='contour'):
         '''Plot the contours.
@@ -238,7 +216,7 @@ class Contours(object):
                 plt.plot(
                     self.contour_times(i),
                     self.contour_freqs(i),
-                    color=self.scores[i]
+                    color=self._scores[i]
                 )
             plt.colorbar()
         elif style == 'overlap':
@@ -246,7 +224,7 @@ class Contours(object):
                 plt.plot(
                     self.contour_times(i),
                     self.contour_freqs(i),
-                    color=self.overlaps[i]
+                    color=self._overlaps[i]
                 )
             plt.colorbar()
 
@@ -294,3 +272,137 @@ def _load_annotation(annotation_fpath):
 
     return annot_times, annot_freqs
 
+
+# All available extractors
+EXTRACTOR_REGISTRY = {}
+
+
+class MetaContourExtractor(type):
+    """Meta-class to register the available extractors."""
+    def __new__(mcs, meta, name, bases, class_dict):
+        cls = type.__new__(meta, name, bases, class_dict)
+        # Register classes that inherit from the base class ContourExtractors
+        if "ContourExtractor" in [base.__name__ for base in bases]:
+            EXTRACTOR_REGISTRY[cls.get_id()] = cls
+        return cls
+
+
+class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
+    """This class is an interface for all the contour extraction algorithms
+    included in motif. Each extractor must inherit from it and implement the
+    following method:
+            compute_contours()
+    Additionally, two private helper functions are provided:
+        - preprocess
+        - postprocess
+    These are meant to do common tasks for all the extractors and they should be
+    called inside the process method if needed.
+
+    Some methods may call a binary in the background, which creates a csv file.
+    The csv file is loaded into memory and the file is deleted, unless
+    clean=False. When recompute=False, this will first look for an existing
+    precomputed contour file and if successful will load it directly.
+    """
+    def __init__(self, audio_filepath, extractor="salamon"):
+        '''
+        Parameters
+        ----------
+        audio_fpath : str
+            Path to audio file
+        extractor : ?
+            ?
+        '''
+        self.audio_filepath = audio_filepath
+        self.extractor = extractor
+        self.recompute = True
+        self.clean = True
+
+    def compute_contours(self):
+        """Method for computing features for given audio file"""
+        raise NotImplementedError("This method must contain the actual "
+                                  "implementation of the contour extraction")
+
+    @classmethod
+    def get_id(cls):
+        """Method to get the id of the extractor type"""
+        raise NotImplementedError("This method must return a string identifier"
+                                  " of the contour extraction type")
+
+    def _preprocess_audio(self, normalize=True, equal_loudness_filter=False,
+                          hpss=False):
+        '''Preprocess the audio before computing contours
+
+        Parameters
+        ----------
+        normalize : bool
+            If True, normalize the audio
+        equal_loudness_fileter : bool
+            If True, applies an equal loudness filter to the audio
+        hpss : bool
+            If True, applies HPSS & computes contours on the harmonic compoment
+
+        '''
+        raise NotImplementedError
+
+    def _postprocess_contours(self):
+        """Remove contours that are too short.
+        """
+        raise NotImplementedError
+
+
+# All available classifiers
+CLASSIFIER_REGISTRY = {}
+
+
+class MetaClassifier(type):
+    """Meta-class to register the available classifiers."""
+    def __new__(mcs, meta, name, bases, class_dict):
+        cls = type.__new__(meta, name, bases, class_dict)
+        # Register classes that inherit from the base class Classifier
+        if "Classifier" in [base.__name__ for base in bases]:
+            CLASSIFIER_REGISTRY[cls.get_id()] = cls
+        return cls
+
+
+class Classifier(six.with_metaclass(MetaClassifier)):
+    """This class is an interface for all the contour extraction algorithms
+    included in motif. Each extractor must inherit from it and implement the
+    following method:
+            compute_contours()
+    Additionally, two private helper functions are provided:
+        - preprocess
+        - postprocess
+    These are meant to do common tasks for all the extractors and they should be
+    called inside the process method if needed.
+
+    Some methods may call a binary in the background, which creates a csv file.
+    The csv file is loaded into memory and the file is deleted, unless
+    clean=False. When recompute=False, this will first look for an existing
+    precomputed contour file and if successful will load it directly.
+    """
+    def __init__(self, classifier="random-forest"):
+        '''
+        Parameters
+        ----------
+        audio_fpath : str
+            Path to audio file
+        extractor : ?
+            ?
+        '''
+        self.classifier = classifier
+
+    def predict(self):
+        """Method for predicting labels from input"""
+        raise NotImplementedError("This method must contain the actual "
+                                  "implementation of the prediction")
+
+    def fit(self):
+        """Method for fitting the model"""
+        raise NotImplementedError("This method must contain the actual "
+                                  "implementation of the model fitting")
+
+    @classmethod
+    def get_id(cls):
+        """Method to get the id of the extractor type"""
+        raise NotImplementedError("This method must return a string identifier"
+                                  " of the contour extraction type")

@@ -5,63 +5,58 @@ import csv
 import numpy as np
 import os
 
+from motif.core import ContourExtractor
+from motif.core import Contours
+
 SALAMON_CONTOUR_STRING = "vamp_melodia-contours_melodia-contours_contoursall"
 
 
-def salamon(audio_fpath, recompute=True, clean=True):
-    """Compute contours as in Justin Salamon's melodia.
-    This calls a vamp plugin in the background, which creates a csv file.
-    The csv file is loaded into memory and the file is deleted, unless
-    clean=False. When recompute=False, this will first look for an existing
-    precomputed contour file and if successful will load it directly.
+class Salamon(ContourExtractor):
 
-    Parameters
-    ----------
-    audio_fpath : str
-        Path to audio file.
-    recompute : bool, default=True
-        If true, recompute contours from audio every time.
-        If false, look for a pre-computed contour file.
-    clean : bool, default=True
-        If True, removes the contour file upon success.
+    @classmethod
+    def get_id(cls):
+        """Identifier of this extractor."""
+        return "salamon"
 
-    Returns
-    -------
-    c_numbers : np.array
-        Array of contour numbers
-    c_times : np.array
-        Array of contour times
-    c_freqs : np.array
-        Array of contour frequencies
-    c_sal : np.array
-        Array of contour saliences
-    """
-    input_file_name = os.path.basename(audio_fpath)
-    output_file_name = "{}_{}.csv".format(
-        input_file_name.split('.')[0], SALAMON_CONTOUR_STRING
-    )
-    output_dir = os.path.dirname(audio_fpath)
-    output_path = os.path.join(output_dir, output_file_name)
-    if recompute or not os.path.exists(output_path):
-        args = [
-            "sonic-annotator", "-d", 
-            "vamp:melodia-contours:melodia-contours:contoursall",
-            "{}".format(audio_fpath), "-w", "csv", "--csv-force"
-        ]
-        os.system(' '.join(args))
+    def compute_contours(self):
+        """Compute contours as in Justin Salamon's melodia.
+        This calls a vamp plugin in the background, which creates a csv file.
+        The csv file is loaded into memory and the file is deleted, unless
+        clean=False. When recompute=False, this will first look for an existing
+        precomputed contour file and if successful will load it directly.
 
-    if not os.path.exists(output_path):
-        raise IOError("Unable to find vamp output file {}".format(output_path))
+        Returns
+        -------
+        Instance of Contours object
+        """
+        input_file_name = os.path.basename(self.audio_filepath)
+        output_file_name = "{}_{}.csv".format(
+            input_file_name.split('.')[0], SALAMON_CONTOUR_STRING
+        )
+        output_dir = os.path.dirname(self.audio_filepath)
+        output_path = os.path.join(output_dir, output_file_name)
+        if self.recompute or not os.path.exists(output_path):
+            args = [
+                "sonic-annotator", "-d", 
+                "vamp:melodia-contours:melodia-contours:contoursall",
+                "{}".format(self.audio_filepath), "-w", "csv", "--csv-force"
+            ]
+            os.system(' '.join(args))
 
-    c_numbers, c_times, c_freqs, c_sal = load_contours(output_path)
+        if not os.path.exists(output_path):
+            raise IOError(
+                "Unable to find vamp output file {}".format(output_path)
+            )
 
-    if clean:
-        os.remove(output_path)
+        c_numbers, c_times, c_freqs, c_sal = _load_contours(output_path)
 
-    return c_numbers, c_times, c_freqs, c_sal
+        if self.clean:
+            os.remove(output_path)
+
+        return Contours(c_numbers, c_times, c_freqs, c_sal)
 
 
-def load_contours(fpath):
+def _load_contours(fpath):
     """ Load contour data from vamp output csv file.
 
     Parameters

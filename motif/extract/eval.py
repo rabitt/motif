@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """ Evaluate the output of contour extraction
+TODO: This is currently old and hacky...make it nice!
 """
 from mir_eval import multipitch
-
 
 import csv
 import numpy as np
