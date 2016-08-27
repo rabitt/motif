@@ -4,15 +4,42 @@
 import numpy as np
 from scipy.stats import boxcox
 from scipy.stats import multivariate_normal
-from sklearn import metrics
 
-from mira.core import Classifier
+from mira.core import ContourExtractor
 
 EPS = 1.0
 
 class MvGaussian(ContourExtractor):
 
-    def fit(train_features, train_labels):
+    def __init__(self):
+        self.rv_pos = None
+        self.rv_neg = None
+        self.n_feats = None
+        self.lmbda = None
+
+    def predict(self, X):
+        """ Compute melodiness score.
+
+        Parameters
+        ----------
+        X : np.array [n_samples, n_features]
+            Features.
+
+        Returns
+        -------
+        p : np.array [n_samples]
+            melodiness scores
+        """
+        if self.rv_pos is None:
+            raise ReferenceError(
+                "fit must be called before predict can be called"
+            )
+        transformed_feats = self.transform(X)
+        numerator = self.rv_pos.pdf(transformed_feats)
+        denominator = self.rv_neg.pdf(transformed_feats)
+        return numerator / denominator
+
+    def fit(self, X, Y):
         """ Fit class-dependent multivariate gaussians on the training set.
 
         Parameters
@@ -29,14 +56,14 @@ class MvGaussian(ContourExtractor):
         rv_neg : multivariate normal
             multivariate normal for non-melody class
         """
-        train_features_boxcox = self._fit_boxcox(train_features, train_labels)
-        pos_idx = np.where(train_labels == 1)[0]
-        mu_pos = np.mean(train_features_boxcox[pos_idx, :], axis=0)
-        cov_pos = np.cov(train_features_boxcox[pos_idx, :], rowvar=0)
+        X_boxcox = self._fit_boxcox(X, Y)
+        pos_idx = np.where(Y == 1)[0]
+        mu_pos = np.mean(X_boxcox[pos_idx, :], axis=0)
+        cov_pos = np.cov(X_boxcox[pos_idx, :], rowvar=0)
 
-        neg_idx = np.where(train_labels == 0)[0]
-        mu_neg = np.mean(train_features_boxcox[neg_idx, :], axis=0)
-        cov_neg = np.cov(train_features_boxcox[neg_idx, :], rowvar=0)
+        neg_idx = np.where(Y == 0)[0]
+        mu_neg = np.mean(X_boxcox[neg_idx, :], axis=0)
+        cov_neg = np.cov(X_boxcox[neg_idx, :], rowvar=0)
         rv_pos = multivariate_normal(
             mean=mu_pos, cov=cov_pos, allow_singular=True
         )
@@ -46,14 +73,12 @@ class MvGaussian(ContourExtractor):
         self.rv_pos = rv_pos
         self.rv_neg = rv_neg
 
-    def predict(self, X, mvg):
-        transformed_feats = mvg.transform(X)
-        numerator = self.rv_pos.pdf(transformed_feats)
-        denominator = self.rv_neg.pdf(transformed_feats)
-        score = numerator/denominator
-        return score
+    @classmethod
+    def get_id(cls):
+        """Method to get the id of the extractor type"""
+        return 'MvGaussian'
 
-    def _fit_boxcox(self, train_features, train_labels):
+    def _fit_boxcox(self, X, Y):
         """ Transform features using a boxcox transform.
 
         Parameters
@@ -70,22 +95,22 @@ class MvGaussian(ContourExtractor):
         x_test_boxcox : np.array [n_samples, n_features_trans]
             Transformed testing features.
         """
-        _, self.n_feats = train_features.shape
+        _, self.n_feats = X.shape
 
-        train_features_boxcox = np.zeros(train_features.shape)
+        X_boxcox = np.zeros(X.shape)
         lmbda_opt = np.zeros((self.n_feats,))
-        
+
         for i in range(self.n_feats):
-            train_features_boxcox[:, i], lmbda_opt[i] = boxcox(
-                train_features[:, i] + EPS
+            X_boxcox[:, i], lmbda_opt[i] = boxcox(
+                X[:, i] + EPS
             )
         self.lmbda = lmbda_opt
-        return train_features_boxcox
+        return X_boxcox
 
-    def transform(self, features):
-        feat_transformed = np.zeros(features.shape)
+    def transform(self, X):
+        X_boxcox = np.zeros(X.shape)
         for i in range(self.n_feats):
-            feat_transformed[:, i] = boxcox(
-                features[:, i] + EPS, lmbda=self.lmbda
+            X_boxcox[:, i] = boxcox(
+                X[:, i] + EPS, lmbda=self.lmbda
             )
-        return feat_transformed
+        return X_boxcox

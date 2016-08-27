@@ -38,7 +38,7 @@ class HLL(ContourExtractor):
 
         if not os.path.exists(output_path):
             args = [
-                "run_hll", 
+                "run_hll",
                 "{}".format(self.audio_filepath), "{}".format(output_path.name)
             ]
             os.system(' '.join(args))
