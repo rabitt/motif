@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
-""" Core methods
+""" Core methods and base class definitions
 """
 import numpy as np
 import csv
 import mir_eval
 import matplotlib.pyplot as plt
 import seaborn as sns
-sns.set()
+import six
+import sox
 
 from . import features as F
 
+sns.set()
 
+
+###############################################################################
 class Contours(object):
     '''Class containing information about all contours in a single audio
     file.
@@ -41,22 +45,23 @@ class Contours(object):
         Mapping from contour number to computed classifier score
 
     '''
-    def __init__(self, index, times, freqs, salience):
+    def __init__(self, index, times, freqs, salience, sample_rate,
+                 audio_filepath):
         '''
         Parameters
         ----------
-        audio_fpath : str
-            Path to audio file
-        method : str
-            Which contour tracking method to use, one of:
-                * 'hll': Harmonic Locked Loop tracking
-                * 'salamon': Contour tracking from Melodia
-                * 'bosch': NotImplemented
-        recompute : bool, default=True
-            If True, computes contours directly from the audio file.
-            If False, first looks for an existing saved contour file.
-        clean : bool, default=True
-            If True, removes any temporary files created. If False, keeps files.
+        index : np.array
+            Array of contour numbers
+        times : np.array
+            Array of contour times
+        freqs : np.array
+            Array of contour frequencies
+        salience : np.array
+            Array of contour saliences
+        sample_rate : float
+            Contour sample rate.
+        audio_filepath : str
+            Path to audio file contours were extracted from
 
         '''
 
@@ -64,10 +69,14 @@ class Contours(object):
         self.index = index
         self.times = times
         self.freqs = freqs
-        self.salience = salience/np.max(salience)
+        self.salience = salience / np.max(salience)
+        self.sample_rate = sample_rate
+        self.audio_filepath = audio_filepath
 
         self.nums = self._compute_nums()
         self.index_mapping = self._compute_index_mapping()
+
+        self.duration = self._compute_duration()
 
         # computed attributes
         self._features = None
@@ -88,6 +97,11 @@ class Contours(object):
             idxs = np.where(self.index == num)[0]
             index_mapping[num] = range(idxs[0], idxs[-1] + 1)
         return index_mapping
+
+    def _compute_duration(self):
+        '''Compute the duration of the audio file.
+        '''
+        return sox.file_info.duration(self.audio_fpath)
 
     def contour_times(self, index):
         '''Get the time stamps for a particular contour number.
@@ -165,7 +179,7 @@ class Contours(object):
                 this_contour_times, this_contour_freqs
             )
             overlaps[i] = res['Overall Accuracy']
-            labels[i] = 1*(overlaps[i] > overlap_threshold)
+            labels[i] = 1 * (overlaps[i] > overlap_threshold)
 
         self._labels = labels
         self._overlaps = overlaps
@@ -273,8 +287,8 @@ def _load_annotation(annotation_fpath):
     return annot_times, annot_freqs
 
 
-# All available extractors
-EXTRACTOR_REGISTRY = {}
+###############################################################################
+EXTRACTOR_REGISTRY = {}  # All available extractors
 
 
 class MetaContourExtractor(type):
@@ -303,16 +317,13 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
     clean=False. When recompute=False, this will first look for an existing
     precomputed contour file and if successful will load it directly.
     """
-    def __init__(self, audio_filepath, extractor="salamon"):
+    def __init__(self, extractor="salamon"):
         '''
         Parameters
         ----------
-        audio_fpath : str
-            Path to audio file
         extractor : ?
             ?
         '''
-        self.audio_filepath = audio_filepath
         self.extractor = extractor
         self.recompute = True
         self.clean = True
@@ -350,8 +361,76 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
         raise NotImplementedError
 
 
-# All available classifiers
-CLASSIFIER_REGISTRY = {}
+###############################################################################
+FEATURES_REGISTRY = {}  # All available classifiers
+
+
+class MetaContourFeatures(type):
+    """Meta-class to register the available contour features."""
+    def __new__(mcs, meta, name, bases, class_dict):
+        cls = type.__new__(meta, name, bases, class_dict)
+        # Register classes that inherit from the base class ContourFeatures
+        if "ContourFeatures" in [base.__name__ for base in bases]:
+            FEATURES_REGISTRY[cls.get_id()] = cls
+        return cls
+
+
+class ContourFeatures(six.with_metaclass(MetaContourFeatures)):
+    """This class is an interface for all the feature extraction combinations
+    included in motif. Each feature set must inherit from it and implement the
+    following method:
+        get_feature_vector(self, times, freqs, salience, duration,
+                           sample_rate)
+            --> This should return a flat numpy array
+        set_feature_names(self)
+            --> This should return a list of the same length as the above
+            numpy array of what each dimension is. Can be as simple as an
+            index, can be idenfiers such as ['vibrato rate', 'vibrato extent']
+    """
+    def __init__(self, identifier="bittner2015"):
+        '''
+        Parameters
+        ----------
+        identifier : str
+            ?
+        '''
+        self.identifier = identifier
+        self.feature_names = self.set_feature_names()
+
+    def get_feature_vector(self, times, freqs, salience, sample_rate):
+        """Method for computing features for a given contour"""
+        raise NotImplementedError("This method must contain the actual "
+                                  "implementation of the contour feautres")
+
+    def set_feature_names(self):
+        """Set the array of features names."""
+        raise NotImplementedError("This method must create and return a list "
+                                  "of feature names, the same length as the"
+                                  "feature vector.")
+
+    @classmethod
+    def get_id(cls):
+        """Method to get the id of the feature type"""
+        raise NotImplementedError("This method must return a string identifier"
+                                  "of the feature type")
+
+    def compute_all_feautres(self, ctr):
+        features = dict.fromkeys(ctr.nums)
+
+        for i in ctr.nums:
+            feature_vector = self.compute_features(
+                ctr.contour_times(i),
+                ctr.contour_freqs(i),
+                ctr.contour_salience(i),
+                ctr.duration,
+                ctr.sample_rate
+            )
+            features[i] = feature_vector
+
+        return features
+
+###############################################################################
+CLASSIFIER_REGISTRY = {}  # All available classifiers
 
 
 class MetaClassifier(type):
@@ -367,36 +446,19 @@ class MetaClassifier(type):
 class Classifier(six.with_metaclass(MetaClassifier)):
     """This class is an interface for all the contour extraction algorithms
     included in motif. Each extractor must inherit from it and implement the
-    following method:
-            compute_contours()
-    Additionally, two private helper functions are provided:
-        - preprocess
-        - postprocess
-    These are meant to do common tasks for all the extractors and they should be
-    called inside the process method if needed.
-
-    Some methods may call a binary in the background, which creates a csv file.
-    The csv file is loaded into memory and the file is deleted, unless
-    clean=False. When recompute=False, this will first look for an existing
-    precomputed contour file and if successful will load it directly.
+    following methods:
+            predict(X)
+            fit(X, y)
     """
-    def __init__(self, classifier="random-forest"):
-        '''
-        Parameters
-        ----------
-        audio_fpath : str
-            Path to audio file
-        extractor : ?
-            ?
-        '''
-        self.classifier = classifier
+    def __init__(self, **kwargs):
+        pass
 
-    def predict(self):
+    def predict(self, X):
         """Method for predicting labels from input"""
         raise NotImplementedError("This method must contain the actual "
                                   "implementation of the prediction")
 
-    def fit(self):
+    def fit(self, X, Y):
         """Method for fitting the model"""
         raise NotImplementedError("This method must contain the actual "
                                   "implementation of the model fitting")
