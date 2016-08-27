@@ -6,8 +6,12 @@ import numpy as np
 
 class MelodiaFeatures(ContourFeatures):
 
+    def __init__(self):
+        self.ref_hz = 55.0
+        ContourFeatures.__init__(self)
+
     def get_feature_vector(self, times, freqs_hz, salience, sample_rate):
-        freqs_cents = utils.hz_to_cents(freqs_hz, ref_hz=55.0)
+        freqs_cents = utils.hz_to_cents(freqs_hz, ref_hz=self.ref_hz)
 
         features = [
             utils.get_contour_onset(times),

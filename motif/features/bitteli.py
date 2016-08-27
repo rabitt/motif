@@ -6,15 +6,26 @@ import numpy as np
 
 class BitteliFeatures(ContourFeatures):
 
+    def __init__(self):
+        self.ref_hz = 55.0
+        self.poly_degree = 5
+        self.min_freq = 3
+        self.max_freq = 30
+        self.freq_step = 0.1
+        self.vibrato_threshold = 0.25
+        ContourFeatures.__init__(self)
+
     def get_feature_vector(self, times, freqs_hz, salience, sample_rate):
-        freqs_cents = utils.hz_to_cents(freqs_hz, ref_hz=55.0)
+        freqs_cents = utils.hz_to_cents(freqs_hz, ref_hz=self.ref_hz)
 
         features = [
             utils.get_contour_shape_features(
-                times, freqs_cents, sample_rate, poly_degree=5, min_freq=3,
-                max_freq=30, freq_step=0.1, vibrato_threshold=0.25),
+                times, freqs_cents, sample_rate, poly_degree=self.poly_degree,
+                min_freq=self.min_freq, max_freq=self.max_freq,
+                freq_step=self.freq_step,
+                vibrato_threshold=self.vibrato_threshold),
             utils.get_polynomial_fit_features(
-                times, salience, n_deg=5, norm=False),
+                times, salience, n_deg=self.poly_degree, norm=False),
             utils.get_contour_onset(times),
             utils.get_contour_offset(times),
             utils.get_contour_duration(times),
