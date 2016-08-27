@@ -3,9 +3,10 @@
 """
 from sklearn.ensemble import RandomForestClassifier as RFC
 from sklearn import cross_validation
+from sklearn.utils import shuffle
 import numpy as np
 
-from mira.core import Classifier
+from motif.core import Classifier
 
 
 class RandomForest(Classifier):
@@ -53,15 +54,20 @@ class RandomForest(Classifier):
             Training labels
 
         """
+        x_shuffle, y_shuffle = shuffle(X, Y)
         self._cross_val_sweep(
-            X, Y, self.n_estimators, self.n_jobs,
+            x_shuffle, y_shuffle, self.n_estimators, self.n_jobs,
             self.class_weight, self.max_features
         )
-        clf = RFC(n_estimators=self.n_estimators, max_depth=self.best_depth,
+        clf = RFC(n_estimators=self.n_estimators, max_depth=self.max_depth,
                   n_jobs=self.n_jobs, class_weight=self.class_weight,
                   max_features=self.max_features)
-        clf.fit(X, Y)
+        clf.fit(x_shuffle, y_shuffle)
         self.clf = clf
+
+    def set_threshold(self):
+        """Positive class is score >= 0.5"""
+        return 0.5
 
     @classmethod
     def get_id(cls):

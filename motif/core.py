@@ -2,12 +2,15 @@
 """ Core methods and base class definitions
 """
 import numpy as np
+import os
 import csv
 import mir_eval
 import matplotlib.pyplot as plt
 import seaborn as sns
 import six
 import sox
+
+from sklearn import metrics
 
 sns.set()
 
@@ -62,6 +65,9 @@ class Contours(object):
             Path to audio file contours were extracted from
 
         '''
+        _validate_contours(index, times, freqs, salience)
+        if not os.path.exists(audio_filepath):
+            raise IOError("audio_filepath does not exist.")
 
         # contour attributes
         self.index = index
@@ -175,9 +181,6 @@ class Contours(object):
             be labeled as a positive example; between 0 and 1.
 
         '''
-        if self._labels is not None:
-            return self._labels
-
         annot_times, annot_freqs = _load_annotation(annotation_fpath)
         ref_times, ref_cent, ref_voicing = _format_annotation(
             annot_times, annot_freqs, self.duration, self.sample_rate
@@ -344,6 +347,15 @@ class Contours(object):
             ))
 
 
+def _validate_contours(index, times, freqs, salience):
+    N = len(index)
+    if any([len(times) != N, len(freqs) != N, len(salience) != N]):
+        raise ValueError(
+            "the arrays index, times, freqs, and salience "
+            "must be the same length."
+        )
+
+
 def _format_contour_data(frequencies):
     """ Convert contour frequencies to cents + voicing.
 
@@ -366,8 +378,7 @@ def _format_contour_data(frequencies):
 
 
 def _format_annotation(annot_times, annot_freqs, duration, sample_rate):
-    """ Load an annotation file into a pandas Series.
-    Add column with frequency values also converted to cents.
+    """ Format an annotation file and resample to a uniform timebase.
 
     Parameters
     ----------
@@ -390,7 +401,7 @@ def _format_annotation(annot_times, annot_freqs, duration, sample_rate):
         Annotation voicings at the new timescale
 
     """
-    annot_times_new = np.arange(0, duration, 1.0/sample_rate)
+    annot_times_new = np.arange(0, duration + 0.5/sample_rate, 1.0/sample_rate)
 
     ref_freq, ref_voicing = mir_eval.melody.freq_to_voicing(annot_freqs)
     ref_cent = mir_eval.melody.hz2cents(ref_freq, 10.)
@@ -416,7 +427,8 @@ def _get_snippet_idx(snippet, full_array):
     Returns
     -------
     idx : np.array
-        Indices of ``full_array`` where ``snippet`` is present.
+        Array of booleans indicating where in ``full_array`` ``snippet``
+        is present.
 
     """
     idx = np.logical_and(
@@ -426,8 +438,7 @@ def _get_snippet_idx(snippet, full_array):
 
 
 def _load_annotation(annotation_fpath):
-    """ Load an annotation file into a pandas Series.
-    Add column with frequency values also converted to cents.
+    """ Load an annotation from a csv file.
 
     Parameters
     ----------
@@ -463,7 +474,7 @@ EXTRACTOR_REGISTRY = {}  # All available extractors
 
 class MetaContourExtractor(type):
     """Meta-class to register the available extractors."""
-    def __new__(mcs, meta, name, bases, class_dict):
+    def __new__(meta, name, bases, class_dict):
         cls = type.__new__(meta, name, bases, class_dict)
         # Register classes that inherit from the base class ContourExtractors
         if "ContourExtractor" in [base.__name__ for base in bases]:
@@ -530,7 +541,7 @@ FEATURES_REGISTRY = {}  # All available classifiers
 
 class MetaContourFeatures(type):
     """Meta-class to register the available contour features."""
-    def __new__(mcs, meta, name, bases, class_dict):
+    def __new__(meta, name, bases, class_dict):
         cls = type.__new__(meta, name, bases, class_dict)
         # Register classes that inherit from the base class ContourFeatures
         if "ContourFeatures" in [base.__name__ for base in bases]:
@@ -604,7 +615,7 @@ CLASSIFIER_REGISTRY = {}  # All available classifiers
 
 class MetaClassifier(type):
     """Meta-class to register the available classifiers."""
-    def __new__(mcs, meta, name, bases, class_dict):
+    def __new__(meta, name, bases, class_dict):
         cls = type.__new__(meta, name, bases, class_dict)
         # Register classes that inherit from the base class Classifier
         if "Classifier" in [base.__name__ for base in bases]:
@@ -618,9 +629,13 @@ class Classifier(six.with_metaclass(MetaClassifier)):
     following methods:
         predict(X)
         fit(X, y)
+        set_threshold()
+            Should return a float whose determines the positive class threshold
+            (e.g. score >= threshold --> positive class,
+             score < threshold --> negative class)
     """
-    def __init__(self, **kwargs):
-        pass
+    def __init__(self):
+        self.threshold = self.set_threshold()
 
     def predict(self, X):
         """Method for predicting labels from input"""
@@ -632,8 +647,49 @@ class Classifier(six.with_metaclass(MetaClassifier)):
         raise NotImplementedError("This method must contain the actual "
                                   "implementation of the model fitting")
 
+    def set_threshold(self):
+        """Returns the float that determines the threhold between the positive
+        and negative class.
+        """
+        raise NotImplementedError("This method most return a float that "
+                                  "indicates the score cutoff between the "
+                                  "positive and negative class.")
+
     @classmethod
     def get_id(cls):
         """Method to get the id of the extractor type"""
         raise NotImplementedError("This method must return a string identifier"
                                   " of the contour extraction type")
+
+    def score(self, predicted_scores, y_target):
+        """ Compute metrics on classifier predictions
+
+        Parameters
+        ----------
+        predicted_scores : np.array [n_samples]
+            predicted scores
+        y_target : np.array [n_samples]
+            Target class labels
+
+        Returns
+        -------
+        scores : dict
+            dictionary of scores for the following metrics:
+            accuracy, matthews correlation coefficient, precision, recall, f1,
+            support, confusion matrix, auc score
+        """
+        y_predicted = 1*(predicted_scores >= self.threshold)
+        scores = {}
+        scores['accuracy'] = metrics.accuracy_score(y_target, y_predicted)
+        scores['mcc'] = metrics.matthews_corrcoef(y_target, y_predicted)
+        (scores['precision'], scores['recall'], scores['f1'], scores['support']
+        ) = metrics.precision_recall_fscore_support(
+            y_target, y_predicted
+        )
+        scores['confusion matrix'] = metrics.confusion_matrix(
+            y_target, y_predicted, labels=[0, 1]
+        )
+        scores['auc score'] = metrics.roc_auc_score(
+            y_target, predicted_scores + 1, average='weighted'
+        )
+        return scores

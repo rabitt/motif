@@ -5,9 +5,10 @@ import numpy as np
 from scipy.stats import boxcox
 from scipy.stats import multivariate_normal
 
-from mira.core import Classifier
+from motif.core import Classifier
 
 EPS = 1.0
+
 
 class MvGaussian(Classifier):
 
@@ -74,6 +75,10 @@ class MvGaussian(Classifier):
         )
         self.rv_pos = rv_pos
         self.rv_neg = rv_neg
+
+    def set_threshold(self):
+        """Positive class is score >= 1.0"""
+        return 1.0
 
     @classmethod
     def get_id(cls):
