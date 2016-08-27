@@ -1,4 +1,5 @@
 import unittest
+import csv
 import os
 import numpy as np
 
@@ -9,235 +10,293 @@ def array_equal(array1, array2):
     return np.all(np.isclose(array1, array2))
 
 
-class TestContoursInit(unittest.TestCase):
+class TestContours(unittest.TestCase):
 
     def setUp(self):
-        self.path = os.path.abspath('tests/data/short.wav')
+        self.index = np.array([0, 0, 1, 1, 1, 2])
+        self.times = np.array([0.0, 0.1, 0.0, 0.1, 0.2, 0.5])
+        self.freqs = np.array([440.0, 441.0, 50.0, 52.0, 55.0, 325.2])
+        self.salience = np.array([0.2, 0.4, 0.5, 0.2, 0.4, 0.0])
+        self.sample_rate = 10.0
+        self.audio_fpath = 'tests/data/short.wav'
         self.ctr = core.Contours(
-            self.path, 'salamon', recompute=False, clean=False
+            self.index, self.times, self.freqs, self.salience, self.sample_rate,
+            self.audio_fpath
         )
 
-    def test_audio_fpath(self):
-        expected = self.path
-        actual = self.ctr.audio_fpath
+    def test_invalid_contours(self):
+        with self.assertRaises(ValueError):
+            core.Contours(
+                self.index, self.times, self.freqs[:-1], self.salience,
+                self.sample_rate, self.audio_fpath
+            )
+
+    def test_invalid_filepath(self):
+        with self.assertRaises(IOError):
+            core.Contours(
+                self.index, self.times, self.freqs, self.salience,
+                self.sample_rate, 'not/a/file.wav'
+            )
+
+    def test_index(self):
+        expected = self.index
+        actual = self.ctr.index
+        self.assertTrue(array_equal(expected, actual))
+
+    def test_times(self):
+        expected = self.times
+        actual = self.ctr.times
+        self.assertTrue(array_equal(expected, actual))
+
+    def test_freqs(self):
+        expected = self.freqs
+        actual = self.ctr.freqs
+        self.assertTrue(array_equal(expected, actual))
+
+    def test_salience(self):
+        expected = np.array([0.4, 0.8, 1.0, 0.4, 0.8, 0.0])
+        actual = self.ctr.salience
+        self.assertTrue(array_equal(expected, actual))
+
+    def test_sample_rate(self):
+        expected = self.sample_rate
+        actual = self.ctr.sample_rate
         self.assertEqual(expected, actual)
 
-    def test_method(self):
-        expected = 'salamon'
-        actual = self.ctr.method
-        self.assertEqual(expected, actual)
-
-    def test_recompute(self):
-        expected = False
-        actual = self.ctr.recompute
-        self.assertEqual(expected, actual)
-
-    def test_clean(self):
-        expected = False
-        actual = self.ctr.clean
+    def test_filepath(self):
+        expected = self.audio_fpath
+        actual = self.ctr.audio_filepath
         self.assertEqual(expected, actual)
 
     def test_nums(self):
-        expected = set([0, 1, 2, 3, 4, 5, 6, 7, 8])
+        expected = [0, 1, 2]
         actual = self.ctr.nums
         self.assertEqual(expected, actual)
 
     def test_index_mapping(self):
-        expected = {
-            0: range(0, 129),
-            1: range(129, 325),
-            2: range(325, 697),
-            3: range(697, 853),
-            4: range(853, 989),
-            5: range(989, 1068),
-            6: range(1068, 1387),
-            7: range(1387, 1517),
-            8: range(1517, 1666)
-        }
+        expected = {0: [0, 1], 1: [2, 3, 4], 2: [5]}
         actual = self.ctr.index_mapping
-        self.assertEqual(expected.keys(), actual.keys())
-        for k in expected.keys():
-            self.assertTrue(array_equal(expected[k], actual[k]))
+        self.assertEqual(expected, actual)
 
-    def test_index(self):
-        expected = np.array(
-            [0]*129 +
-            [1]*196 +
-            [2]*372 +
-            [3]*156 +
-            [4]*136 +
-            [5]*79 +
-            [6]*319 +
-            [7]*130 +
-            [8]*149
-        )
-        actual = self.ctr.index
-        print sum(expected == 3)
-        print sum(actual == 3)
-        self.assertTrue(array_equal(expected, actual))
-
-    def test_times(self):
-        expected = np.array([0.325079, 0.327982, 0.330884, 0.333787, 0.336689])
-        actual = self.ctr.times[:5]
-        print actual
-        self.assertTrue(array_equal(expected, actual))
-
-    def test_freqs(self):
-        expected = np.array([198.275, 198.275, 199.424, 198.275, 198.275])
-        actual = self.ctr.freqs[:5]
-        print actual
-        self.assertTrue(array_equal(expected, actual))
-
-    def test_salience(self):
-        expected = np.array(
-            [0.44957045, 0.41604075, 0.44865103, 0.42353233, 0.48934882]
-        )
-        actual = self.ctr.salience[:5]
-        self.assertTrue(array_equal(expected, actual))
-
-    def test_sal_normalization(self):
-        expected = 1.0
-        actual = np.max(self.ctr.salience)
+    def test_duration(self):
+        expected = 3.0
+        actual = self.ctr.duration
         self.assertEqual(expected, actual)
 
     def test_features(self):
         expected = None
-        actual = self.ctr.features
+        actual = self.ctr._features
         self.assertEqual(expected, actual)
 
     def test_labels(self):
         expected = None
-        actual = self.ctr.labels
+        actual = self.ctr._labels
         self.assertEqual(expected, actual)
 
     def test_overlaps(self):
         expected = None
-        actual = self.ctr.overlaps
+        actual = self.ctr._overlaps
         self.assertEqual(expected, actual)
 
     def test_scores(self):
         expected = None
-        actual = self.ctr.scores
+        actual = self.ctr._scores
         self.assertEqual(expected, actual)
 
-
-class TestContoursMethods(unittest.TestCase):
-
-    def setUp(self):
-        self.path = os.path.abspath('tests/data/short.wav')
-        self.ctr = core.Contours(
-            self.path, 'salamon', recompute=False, clean=False
-        )
-
     def test_contour_times(self):
-        expected = np.array([0.325079, 0.327982, 0.330884, 0.333787, 0.336689])
-        actual_times = self.ctr.contour_times(0)
-        actual = actual_times[:5]
+        expected = np.array([0.0, 0.1, 0.2])
+        actual = self.ctr.contour_times(1)
         self.assertTrue(array_equal(expected, actual))
-
-        expected_length = 129
-        actual_length = len(actual_times)
-        self.assertEqual(expected_length, actual_length)
 
     def test_contour_freqs(self):
-        expected = np.array([198.275, 198.275, 199.424, 198.275, 198.275])
-        actual_freqs = self.ctr.contour_freqs(0)
-        actual = actual_freqs[:5]
+        expected = np.array([440.0, 441.0])
+        actual = self.ctr.contour_freqs(0)
         self.assertTrue(array_equal(expected, actual))
-
-        expected_length = 129
-        actual_length = len(actual_freqs)
-        self.assertEqual(expected_length, actual_length)
 
     def test_contour_salience(self):
-        expected = np.array(
-            [0.44957045, 0.41604075, 0.44865103, 0.42353233, 0.48934882]
-        )
-        actual_salience = self.ctr.contour_salience(0)
-        actual = actual_salience[:5]
+        expected = np.array([0.0])
+        actual = self.ctr.contour_salience(2)
         self.assertTrue(array_equal(expected, actual))
 
-        expected_length = 129
-        actual_length = len(actual_salience)
-        self.assertEqual(expected_length, actual_length)
-
-    def test_get_labels(self):
-        expected_labels = {
-            0: 1,
-            1: 0,
-            2: 1,
-            3: 0,
-            4: 0,
-            5: 0,
-            6: 1,
-            7: 0,
-            8: 0
-        }
-        expected_overlaps = {
-            0: 1.0,
-            1: 0,
-            2: 1.0,
-            3: 0,
-            4: 0,
-            5: 0,
-            6: 0.55339805825242716,
-            7: 0,
-            8: 0
-        }
-        self.ctr.get_labels('tests/data/short_annotation.csv')
-        actual_labels = self.ctr.labels
-        actual_overlaps = self.ctr.overlaps
-        self.assertEqual(expected_labels, actual_labels)
+    def test_compute_labels_default(self):
+        self.ctr.compute_labels('tests/data/test_annotation.csv')
+        expected_overlaps = {0: 1.0, 1: 1.0/3.0, 2: 0.0}
+        expected_labels = {0: 1, 1: 0, 2: 0}
+        actual_overlaps = self.ctr._overlaps
+        actual_labels = self.ctr._labels
         self.assertEqual(expected_overlaps, actual_overlaps)
+        self.assertEqual(expected_labels, actual_labels)
 
-    def test_get_labels_olap(self):
-        expected_labels = {
-            0: 1,
-            1: 0,
-            2: 1,
-            3: 0,
-            4: 0,
-            5: 0,
-            6: 0,
-            7: 0,
-            8: 0
-        }
-        expected_overlaps = {
-            0: 1.0,
-            1: 0,
-            2: 1.0,
-            3: 0,
-            4: 0,
-            5: 0,
-            6: 0.55339805825242716,
-            7: 0,
-            8: 0
-        }
-        self.ctr.get_labels(
-            'tests/data/short_annotation.csv', overlap_threshold=0.6
+    def test_compute_labels_default(self):
+        self.ctr.compute_labels(
+            'tests/data/test_annotation.csv', overlap_threshold=0.2
         )
-        actual_labels = self.ctr.labels
-        actual_overlaps = self.ctr.overlaps
-        self.assertEqual(expected_labels, actual_labels)
+        expected_overlaps = {0: 1.0, 1: 1.0/3.0, 2: 0.0}
+        expected_labels = {0: 1, 1: 1, 2: 0}
+        actual_overlaps = self.ctr._overlaps
+        actual_labels = self.ctr._labels
         self.assertEqual(expected_overlaps, actual_overlaps)
+        self.assertEqual(expected_labels, actual_labels)
 
     def test_compute_features(self):
-        self.ctr.compute_features()
-        expected = np.array([
-            9.72662505e-01, 4.64411679e-04, 5.65660464e-02, 7.37664894e-01,
-            1.95228333e-01, 4.89478291e-01, 1.09299463e+01, 3.85710124e+01,
-            8.75000000e-01, 3.71520000e-01, 1.96272752e+02, 1.00511299e+00,
-            6.87200000e+00
-        ])
-        actual = self.ctr.features[0]
+        pass
+
+    def test_compute_scores(self):
+        pass
+
+    def test_stack_features_none(self):
+        with self.assertRaises(ReferenceError):
+            self.ctr.stack_features()
+
+    def test_stack_features(self):
+        self.ctr._features = {0: [1, 1, 1], 2: [0, 0, 0], 1: [1, 1, 1]}
+        expected = np.array([[1, 1, 1], [1, 1, 1], [0, 0, 0]])
+        actual = self.ctr.stack_features()
         self.assertTrue(array_equal(expected, actual))
 
-        expected_keys = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-        acutal_keys = self.ctr.features.keys()
-        self.assertEqual(expected_keys, acutal_keys)
+    def test_stack_labels_none(self):
+        with self.assertRaises(ReferenceError):
+            self.ctr.stack_labels()
+
+    def test_stack_labels(self):
+        self.ctr._labels = {0: 1, 2: 0, 1: 0}
+        expected = np.array([1, 0, 0])
+        actual = self.ctr.stack_labels()
+        self.assertTrue(array_equal(expected, actual))
+
+    def test_plot(self):
+        pass
+
+    def test_save_target_contours_none(self):
+        with self.assertRaises(ReferenceError):
+            self.ctr.save_target_contours('tests/data/contours.csv')
+
+    def test_save_target_contours(self):
+        self.ctr._scores = {0: 0.6, 1: 0.2, 2: 0.9}
+        fpath = 'tests/data/target_contours.csv'
+        self.ctr.save_target_contours(fpath)
+        expected = [
+            [0, 0.0, 440.0, 0.4],
+            [0, 0.1, 441.0, 0.8],
+            [2, 0.5, 325.2, 0.0]
+        ]
+        with open(fpath, 'r') as fhandle:
+            reader = csv.reader(fhandle, delimiter=',')
+            actual = [[float(a) for a in line] for line in reader]
+
+        os.remove(fpath)
+        self.assertTrue(array_equal(expected, actual))
 
     def test_save(self):
-        self.ctr.save('tests/data/temp.csv')
-        os.remove('tests/data/temp.csv')
+        self.ctr._scores = {0: 0.6, 1: 0.2, 2: 0.9}
+        fpath = 'tests/data/contours.csv'
+        self.ctr.save(fpath)
+        expected = [
+            [0, 0.0, 440.0, 0.4],
+            [0, 0.1, 441.0, 0.8],
+            [1, 0.0, 50.0, 1.0],
+            [1, 0.1, 52.0, 0.4],
+            [1, 0.2, 55.0, 0.8],
+            [2, 0.5, 325.2, 0.0]
+        ]
+
+        with open(fpath, 'r') as fhandle:
+            reader = csv.reader(fhandle, delimiter=',')
+            actual = [[float(a) for a in line] for line in reader]
+
+        os.remove(fpath)
+        self.assertTrue(array_equal(expected, actual))
+
+class TestValidateContours(unittest.TestCase):
+
+    def test_valid(self):
+        expected = None
+        acutal = core._validate_contours([0], [0], [0], [0])
+
+    def test_invalid(self):
+        with self.assertRaises(ValueError):
+            acutal = core._validate_contours([0], [0], [0], [0, 1])
+
+
+class TestFormatContourData(unittest.TestCase):
+
+    def test_format_contour_data(self):
+        frequencies = np.array([440.0, 0.0, -440.0, 0.0])
+        actual_cents, actual_voicing = core._format_contour_data(frequencies)
+        expected_cents = np.array([6551.31794236, 0.0, 6551.31794236, 0.0])
+        expected_voicing = np.array([True, False, False, False])
+        self.assertTrue(array_equal(expected_cents, actual_cents))
+        self.assertTrue(array_equal(expected_voicing, actual_voicing))
+
+
+class TestFormatAnnotation(unittest.TestCase):
+
+    def test_format_annotation(self):
+        times = np.array([0.0, 1.0, 2.0])
+        freqs = np.array([50.0, 60.0, 70.0])
+        duration = 2.0
+        sample_rate = 2.0
+        actual_times, actual_cent, actual_voicing = core._format_annotation(
+            times, freqs, duration, sample_rate
+        )
+        expected_times = np.array([0.0, 0.5, 1.0, 1.5, 2.0])
+        expected_cent = np.array([
+            2786.31371386, 2944.13435737, 3101.95500087,
+            3235.39045367, 3368.82590647
+        ])
+
+        expected_voicing = np.array([True, True, True, True, True])
+
+        self.assertTrue(array_equal(expected_times, actual_times))
+        self.assertTrue(array_equal(expected_cent, actual_cent))
+        self.assertTrue(array_equal(expected_voicing, actual_voicing))
+
+    def test_format_annotation_same_times(self):
+        times = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
+        freqs = np.array([50.0, 60.0, 70.0, 0.0, 0.0, 0.0])
+        duration = 5.0
+        sample_rate = 1.0
+        actual_times, actual_cent, actual_voicing = core._format_annotation(
+            times, freqs, duration, sample_rate
+        )
+        expected_times = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
+        expected_cent = np.array([
+            2786.31371386, 3101.95500087,
+            3368.82590647, 0.0, 0.0, 0.0
+        ])
+
+        expected_voicing = np.array([True, True, True, False, False, False])
+
+        self.assertTrue(array_equal(expected_times, actual_times))
+        self.assertTrue(array_equal(expected_cent, actual_cent))
+        self.assertTrue(array_equal(expected_voicing, actual_voicing))
+
+
+class TestGetSnippetIdx(unittest.TestCase):
+
+    def test_get_snippet_idx(self):
+        snippet = np.array([2.0, 3.2, 4.4])
+        full_array = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
+        expected = np.array([False, False, True, True, True, False])
+        actual = core._get_snippet_idx(snippet, full_array)
+        print expected
+        print actual
+        self.assertTrue(array_equal(expected, actual))
+
+
+class TestLoadAnnotation(unittest.TestCase):
+
+    def test_load_annotation(self):
+        expected_times = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
+        expected_freqs = np.array([440.0, 441.0, 55.0, 56.0, 57.0, 200.0])
+        actual_times, actual_freqs = core._load_annotation(
+            'tests/data/test_annotation.csv'
+        )
+        self.assertTrue(array_equal(expected_times, actual_times))
+        self.assertTrue(array_equal(expected_freqs, actual_freqs))
+
+
+
+
 
 
