@@ -24,7 +24,7 @@ def process(audio_files=None, training_pairs=None, testing_pairs=None,
 
         # get training score
         Y_pred = contour_classifier.predict(X_train)
-        clf_eval.score(Y_pred, Y_train)
+        train_scores = clf_eval.score(Y_pred, Y_train)
 
     if testing_pairs is not None:
         X_test, Y_test, test_contours = process_with_labels(
@@ -33,14 +33,16 @@ def process(audio_files=None, training_pairs=None, testing_pairs=None,
 
         # get testing score
         Y_pred = contour_classifier.predict(X_test)
-        clf_eval.score(Y_pred, Y_test)
+        test_scores = clf_eval.score(Y_pred, Y_test)
 
     if audio_files is not None:
         contour_list = process_audio_only(
             contour_extractor, contour_features, contour_classifier, audio_files
         )
 
-    return train_contours, test_contours, contour_list
+    return (
+        train_contours, train_scores, test_contours, test_scores, contour_list
+    )
 
 
 def process_audio_only(contour_extractor, contour_features, contour_classifier,
