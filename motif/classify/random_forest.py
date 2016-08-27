@@ -5,10 +5,15 @@ from sklearn.ensemble import RandomForestClassifier as RFC
 from sklearn import cross_validation
 import numpy as np
 
-class RandomForest(ContourExtractor):
+from mira.core import Classifier
+
+
+class RandomForest(Classifier):
 
     def __init__(self, n_estimators=100, n_jobs=-1, class_weight='auto',
                  max_features=None):
+        Classifier.__init__(self)
+
         self.n_estimators = n_estimators
         self.n_jobs = n_jobs
         self.class_weight = class_weight
@@ -61,7 +66,7 @@ class RandomForest(ContourExtractor):
     @classmethod
     def get_id(cls):
         """Method to get the id of the extractor type"""
-        return 'RandomForest'
+        return 'random_forest'
 
     def _cross_val_sweep(self, X, Y, n_estimators, n_jobs, class_weight,
                          max_features, max_search=100, step=5):

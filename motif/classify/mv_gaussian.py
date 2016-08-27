@@ -5,13 +5,15 @@ import numpy as np
 from scipy.stats import boxcox
 from scipy.stats import multivariate_normal
 
-from mira.core import ContourExtractor
+from mira.core import Classifier
 
 EPS = 1.0
 
-class MvGaussian(ContourExtractor):
+class MvGaussian(Classifier):
 
     def __init__(self):
+        Classifier.__init__(self)
+
         self.rv_pos = None
         self.rv_neg = None
         self.n_feats = None
@@ -76,7 +78,7 @@ class MvGaussian(ContourExtractor):
     @classmethod
     def get_id(cls):
         """Method to get the id of the extractor type"""
-        return 'MvGaussian'
+        return 'mv_gaussian'
 
     def _fit_boxcox(self, X, Y):
         """ Transform features using a boxcox transform.
