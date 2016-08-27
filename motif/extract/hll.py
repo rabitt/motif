@@ -16,12 +16,17 @@ class HLL(ContourExtractor):
         """Identifier of this extractor."""
         return "hll"
 
-    def compute_contours(self):
+    def compute_contours(self, audio_filepath):
         """Compute contours using Harmonic Locked Loops.
         This calls a binary in the background, which creates a csv file.
         The csv file is loaded into memory and the file is deleted, unless
         clean=False. When recompute=False, this will first look for an existing
         precomputed contour file and if successful will load it directly.
+
+        Parameters
+        ----------
+        audio_filepath : str
+            Path to audio file.
 
         Returns
         -------
@@ -31,15 +36,15 @@ class HLL(ContourExtractor):
             output_file_object = tmp.NamedTemporaryFile('csv')
             output_path = output_file_object.name
         else:
-            input_name = os.path.basename(self.audio_filepath)
-            input_dir = os.path.dirname(self.audio_filepath)
+            input_name = os.path.basename(audio_filepath)
+            input_dir = os.path.dirname(audio_filepath)
             output_name = "{}_HLL_contours.csv".format(input_name.split('.'))
             output_path = os.path.join(input_dir, output_name)
 
         if not os.path.exists(output_path):
             args = [
                 "run_hll",
-                "{}".format(self.audio_filepath), "{}".format(output_path.name)
+                "{}".format(audio_filepath), "{}".format(output_path.name)
             ]
             os.system(' '.join(args))
 

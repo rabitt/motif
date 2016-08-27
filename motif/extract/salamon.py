@@ -18,28 +18,33 @@ class Salamon(ContourExtractor):
         """Identifier of this extractor."""
         return "salamon"
 
-    def compute_contours(self):
+    def compute_contours(self, audio_filepath):
         """Compute contours as in Justin Salamon's melodia.
         This calls a vamp plugin in the background, which creates a csv file.
         The csv file is loaded into memory and the file is deleted, unless
         clean=False. When recompute=False, this will first look for an existing
         precomputed contour file and if successful will load it directly.
 
+        Parameters
+        ----------
+        audio_filepath : str
+            Path to audio file.
+
         Returns
         -------
         Instance of Contours object
         """
-        input_file_name = os.path.basename(self.audio_filepath)
+        input_file_name = os.path.basename(audio_filepath)
         output_file_name = "{}_{}.csv".format(
             input_file_name.split('.')[0], SALAMON_CONTOUR_STRING
         )
-        output_dir = os.path.dirname(self.audio_filepath)
+        output_dir = os.path.dirname(audio_filepath)
         output_path = os.path.join(output_dir, output_file_name)
         if self.recompute or not os.path.exists(output_path):
             args = [
                 "sonic-annotator", "-d", 
                 "vamp:melodia-contours:melodia-contours:contoursall",
-                "{}".format(self.audio_filepath), "-w", "csv", "--csv-force"
+                "{}".format(audio_filepath), "-w", "csv", "--csv-force"
             ]
             os.system(' '.join(args))
 
