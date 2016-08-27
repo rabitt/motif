@@ -298,12 +298,22 @@ class Contours(object):
         plt.axis('tight')
 
     def save_target_contours(self, output_fpath, threshold=0.5):
+        '''Save extracted contours where score >= threshold to a csv file.
+
+        Parameters
+        ----------
+        output_fpath : str
+            Path to save output csv file.
+        threshold : float
+            Minimum score to be considered part of the target class.
+
+        '''
         if self._scores is None:
             raise ReferenceError("No scores to save")
         nums_target = [n for n in self.nums if self._scores[n] >= threshold]
         target_indices = []
-        for n in nums_target:
-            target_indices.extend(self.index_mapping[n])
+        for num in nums_target:
+            target_indices.extend(self.index_mapping[num])
 
         with open(output_fpath, 'w') as fhandle:
             writer = csv.writer(fhandle, delimiter=',')
@@ -335,13 +345,51 @@ class Contours(object):
 
 
 def _format_contour_data(frequencies):
+    """ Convert contour frequencies to cents + voicing.
+
+    Parameters
+    ----------
+    frequencies : np.array
+        Contour frequency values
+
+    Returns
+    -------
+    est_cent : np.array
+        Contour frequencies in cents
+    est_voicing : np.array
+        Contour voicings
+
+    """
     est_freqs, est_voicing = mir_eval.melody.freq_to_voicing(frequencies)
     est_cents = mir_eval.melody.hz2cents(est_freqs, 10.)
     return est_cents, est_voicing
 
 
 def _format_annotation(annot_times, annot_freqs, duration, sample_rate):
+    """ Load an annotation file into a pandas Series.
+    Add column with frequency values also converted to cents.
 
+    Parameters
+    ----------
+    annot_times : np.array
+        Annotation time stamps
+    annot_freqs : np.array
+        Annotation frequency values
+    duration : float
+        Length of the full audio file in seconds.
+    sample_rate : float
+        The target sample rate.
+
+    Returns
+    -------
+    annot_times_new : np.array
+        New annotation time stamps
+    ref_cent : np.array
+        Annotation frequencies in cents at the new timescale
+    ref_voicing : np.array
+        Annotation voicings at the new timescale
+
+    """
     annot_times_new = np.arange(0, duration, 1.0/sample_rate)
 
     ref_freq, ref_voicing = mir_eval.melody.freq_to_voicing(annot_freqs)
@@ -355,10 +403,27 @@ def _format_annotation(annot_times, annot_freqs, duration, sample_rate):
 
 
 def _get_snippet_idx(snippet, full_array):
-    gt_idx = np.logical_and(
-        annot_times >= contour_times[0], annot_times <= contour_times[-1]
+    """ Find the indices of ``full_array`` where ``snippet`` is present.
+    Assumes both ``snippet`` and ``full_array`` are ordered.
+
+    Parameters
+    ----------
+    snippet : np.array
+        Array of ordered time stamps
+    full_array : np.array
+        Array of ordered time stamps
+
+    Returns
+    -------
+    idx : np.array
+        Indices of ``full_array`` where ``snippet`` is present.
+
+    """
+    idx = np.logical_and(
+        full_array >= snippet[0], full_array <= snippet[-1]
     )
-    return gt_idx
+    return idx
+
 
 def _load_annotation(annotation_fpath):
     """ Load an annotation file into a pandas Series.
@@ -572,6 +637,3 @@ class Classifier(six.with_metaclass(MetaClassifier)):
         """Method to get the id of the extractor type"""
         raise NotImplementedError("This method must return a string identifier"
                                   " of the contour extraction type")
-
-    def build_training_set(self, contours_list):
-        pass
