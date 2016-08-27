@@ -9,8 +9,6 @@ import seaborn as sns
 import six
 import sox
 
-from . import features as F
-
 sns.set()
 
 
@@ -34,14 +32,14 @@ class Contours(object):
         array of contour frequencies
     salience : array
         array of contour salience values
-    features : dict
+    _features : dict
         Mapping from contour number to computed features.
         Will not be set until the compute_features method is run
-    labels : dict
+    _labels : dict
         Mapping from contour number to computed ground truth labels.
-    overlaps : dict
+    _overlaps : dict
         Mapping from contour number to computed overlap with ground truth
-    scores : dict
+    _scores : dict
         Mapping from contour number to computed classifier score
 
     '''
@@ -85,12 +83,24 @@ class Contours(object):
         self._scores = None
 
     def _compute_nums(self):
-        '''Compute the set of contour index numbers
+        '''Compute the list of contour index numbers
+
+        Returns
+        -------
+        nums : list
+            Sorted list of contour index numbers
+
         '''
-        return list(set(self.index))
+        return sorted(list(set(self.index)))
 
     def _compute_index_mapping(self):
         '''Computes the mapping from contour numbers to indices.
+
+        Returns
+        -------
+        index_mapping : dict
+            Mapping from contour numbers to indices.
+
         '''
         index_mapping = dict.fromkeys(self.nums)
         for num in self.nums:
@@ -100,8 +110,13 @@ class Contours(object):
 
     def _compute_duration(self):
         '''Compute the duration of the audio file.
+
+        Returns
+        -------
+        duration : float
+            Audio file duration
         '''
-        return sox.file_info.duration(self.audio_fpath)
+        return sox.file_info.duration(self.audio_filepath)
 
     def contour_times(self, index):
         '''Get the time stamps for a particular contour number.
@@ -148,7 +163,7 @@ class Contours(object):
         '''
         return self.salience[self.index_mapping[index]]
 
-    def get_labels(self, annotation_fpath, overlap_threshold=0.5):
+    def compute_labels(self, annotation_fpath, overlap_threshold=0.5):
         '''Compute overlaps with an annotation and labels for each contour.
 
         Parameters
@@ -160,44 +175,80 @@ class Contours(object):
             be labeled as a positive example; between 0 and 1.
 
         '''
+        if self._labels is not None:
+            return self._labels
+
         annot_times, annot_freqs = _load_annotation(annotation_fpath)
+        ref_times, ref_cent, ref_voicing = _format_annotation(
+            annot_times, annot_freqs, self.duration, self.sample_rate
+        )
+        est_cents, est_voicing = _format_contour_data(self.freqs)
+
         labels = dict.fromkeys(self.nums)
         overlaps = dict.fromkeys(self.nums)
 
         for i in self.nums:
-            this_contour_times = self.contour_times(i)
-            this_contour_freqs = self.contour_freqs(i)
-            start_t = this_contour_times[0]
-            end_t = this_contour_times[-1]
-            gt_idx = np.logical_and(
-                annot_times >= start_t, annot_times <= end_t
+            gt_idx = _get_snippet_idx(self.contour_times(i), ref_times)
+            overlaps[i] = mir_eval.melody.overall_accuracy(
+                ref_voicing[gt_idx], ref_cent[gt_idx],
+                est_voicing[self.index_mapping[i]],
+                est_cents[self.index_mapping[i]]
             )
-            this_annot_times = annot_times[gt_idx]
-            this_annot_freqs = annot_freqs[gt_idx]
-            res = mir_eval.melody.evaluate(
-                this_annot_times, this_annot_freqs,
-                this_contour_times, this_contour_freqs
-            )
-            overlaps[i] = res['Overall Accuracy']
             labels[i] = 1 * (overlaps[i] > overlap_threshold)
 
         self._labels = labels
         self._overlaps = overlaps
 
-    def compute_features(self):
+    def compute_features(self, ctr_ftr):
         '''Compute features for each contour.
+
+        Parameters
+        ----------
+        ctr_ftr : ContourFeatures
+            A ContourFeatures object.
+
         '''
-        features = dict.fromkeys(self.nums)
+        self._features = ctr_ftr.compute_all_feautres(self)
 
-        for i in self.nums:
-            cft = F.ContourFeatures(
-                self.contour_times(i),
-                self.contour_freqs(i),
-                self.contour_salience(i)
-            )
-            features[i] = cft.get_features()
+    def compute_scores(self, contour_classifier):
+        '''Compute scores using a given classifier.
 
-        self._features = features
+        Parameters
+        ----------
+        contour_classifier : Classifier
+            A trained Classifier object.
+
+        '''
+        features = self.stack_features()
+        labels = contour_classifier.predict(features)
+        scores = {n: labels[n] for n in self.nums}
+        self._scores = scores
+
+    def stack_features(self):
+        '''Stack features into numpy array.
+
+        Returns
+        -------
+        X : np.array [n_contours, n_features]
+            Array of stacked features.
+
+        '''
+        if self._features is None:
+            raise ReferenceError("Features have not yet been computed.")
+        return np.array([self._features[n] for n in self.nums])
+
+    def stack_labels(self):
+        '''Stack labels into numpy array.
+
+        Returns
+        -------
+        Y : np.array [n_contours, 1]
+            Array of stacked labels.
+
+        '''
+        if self._labels is None:
+            raise ReferenceError("Labels have not yet been computed.")
+        return np.array([self._labels[n] for n in self.nums])
 
     def plot(self, style='contour'):
         '''Plot the contours.
@@ -246,7 +297,33 @@ class Contours(object):
         plt.ylabel('Frequency (Hz)')
         plt.axis('tight')
 
+    def save_target_contours(self, output_fpath, threshold=0.5):
+        if self._scores is None:
+            raise ReferenceError("No scores to save")
+        nums_target = [n for n in self.nums if self._scores[n] >= threshold]
+        target_indices = []
+        for n in nums_target:
+            target_indices.extend(self.index_mapping[n])
+
+        with open(output_fpath, 'w') as fhandle:
+            writer = csv.writer(fhandle, delimiter=',')
+            writer.writerows(zip(
+                self.index[target_indices],
+                self.times[target_indices],
+                self.freqs[target_indices],
+                self.salience[target_indices]
+            ))       
+
+
     def save(self, output_fpath):
+        '''Save extracted contours to a csv file.
+
+        Parameters
+        ----------
+        output_fpath : str
+            Path to save output csv file.
+
+        '''
         with open(output_fpath, 'w') as fhandle:
             writer = csv.writer(fhandle, delimiter=',')
             writer.writerows(zip(
@@ -255,6 +332,33 @@ class Contours(object):
                 self.freqs,
                 self.salience
             ))
+
+
+def _format_contour_data(frequencies):
+    est_freqs, est_voicing = mir_eval.melody.freq_to_voicing(frequencies)
+    est_cents = mir_eval.melody.hz2cents(est_freqs, 10.)
+    return est_cents, est_voicing
+
+
+def _format_annotation(annot_times, annot_freqs, duration, sample_rate):
+
+    annot_times_new = np.arange(0, duration, 1.0/sample_rate)
+
+    ref_freq, ref_voicing = mir_eval.melody.freq_to_voicing(annot_freqs)
+    ref_cent = mir_eval.melody.hz2cents(ref_freq, 10.)
+
+    ref_cent, ref_voicing = mir_eval.melody.resample_melody_series(
+        annot_times, ref_cent, ref_voicing, annot_times_new,
+        kind='linear'
+    )
+    return annot_times_new, ref_cent, ref_voicing
+
+
+def _get_snippet_idx(snippet, full_array):
+    gt_idx = np.logical_and(
+        annot_times >= contour_times[0], annot_times <= contour_times[-1]
+    )
+    return gt_idx
 
 def _load_annotation(annotation_fpath):
     """ Load an annotation file into a pandas Series.
@@ -271,6 +375,7 @@ def _load_annotation(annotation_fpath):
         Annotation time stamps
     annot_freqs : array
         Annotation frequency values
+
     """
     if annotation_fpath is not None:
         annot_times = []
@@ -317,18 +422,11 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
     clean=False. When recompute=False, this will first look for an existing
     precomputed contour file and if successful will load it directly.
     """
-    def __init__(self, extractor="salamon"):
-        '''
-        Parameters
-        ----------
-        extractor : ?
-            ?
-        '''
-        self.extractor = extractor
+    def __init__(self):
         self.recompute = True
         self.clean = True
 
-    def compute_contours(self):
+    def compute_contours(self, audio_filepath):
         """Method for computing features for given audio file"""
         raise NotImplementedError("This method must contain the actual "
                                   "implementation of the contour extraction")
@@ -385,16 +483,9 @@ class ContourFeatures(six.with_metaclass(MetaContourFeatures)):
         set_feature_names(self)
             --> This should return a list of the same length as the above
             numpy array of what each dimension is. Can be as simple as an
-            index, can be idenfiers such as ['vibrato rate', 'vibrato extent']
+            index, can be identfiers such as ['vibrato rate', 'vibrato extent']
     """
-    def __init__(self, identifier="bittner2015"):
-        '''
-        Parameters
-        ----------
-        identifier : str
-            ?
-        '''
-        self.identifier = identifier
+    def __init__(self):
         self.feature_names = self.set_feature_names()
 
     def get_feature_vector(self, times, freqs, salience, sample_rate):
@@ -415,14 +506,27 @@ class ContourFeatures(six.with_metaclass(MetaContourFeatures)):
                                   "of the feature type")
 
     def compute_all_feautres(self, ctr):
+        """ Load an annotation file into a pandas Series.
+        Add column with frequency values also converted to cents.
+
+        Parameters
+        ----------
+        ctr : Contour
+            
+
+        Returns
+        -------
+        features : np.array
+            Annotation time stamps
+
+        """
         features = dict.fromkeys(ctr.nums)
 
         for i in ctr.nums:
-            feature_vector = self.compute_features(
+            feature_vector = self.get_feature_vector(
                 ctr.contour_times(i),
                 ctr.contour_freqs(i),
                 ctr.contour_salience(i),
-                ctr.duration,
                 ctr.sample_rate
             )
             features[i] = feature_vector
@@ -447,8 +551,8 @@ class Classifier(six.with_metaclass(MetaClassifier)):
     """This class is an interface for all the contour extraction algorithms
     included in motif. Each extractor must inherit from it and implement the
     following methods:
-            predict(X)
-            fit(X, y)
+        predict(X)
+        fit(X, y)
     """
     def __init__(self, **kwargs):
         pass
@@ -468,3 +572,6 @@ class Classifier(six.with_metaclass(MetaClassifier)):
         """Method to get the id of the extractor type"""
         raise NotImplementedError("This method must return a string identifier"
                                   " of the contour extraction type")
+
+    def build_training_set(self, contours_list):
+        pass
