@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """ Evaluate the output of the decoder.
+TODO: This is old and hacky, make it nice!
 """
 #TODO: actually write this
 def score():
