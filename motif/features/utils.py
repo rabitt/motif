@@ -187,7 +187,7 @@ def get_polynomial_fit_features(times, signal, n_deg=5, norm=False):
     poly_coeff, _, residual = _fit_poly(
         n_deg, signal, grid=times, norm=norm
     )
-    return np.concatenate([poly_coeff, np.linalg.norm(residual)])
+    return np.concatenate([poly_coeff, [np.linalg.norm(residual)]])
 
 
 def _fit_poly(n_poly_degrees, signal, grid=None, norm=False):
@@ -304,6 +304,7 @@ def _compute_coverage_array(y_sinfit_diff, n_intervals, n_points,
         ).astype(int)
     )
     half_period_idx.append(n_points)
+    print half_period_idx
     # compute the goodness of fit for each half period
     diff_thresh = np.zeros(y_sinfit_diff.shape)
     coverage = np.zeros(y_sinfit_diff.shape)
