@@ -4,6 +4,17 @@ import os
 import numpy as np
 
 from motif import core
+from motif import features
+
+
+
+def relpath(f):
+    return os.path.join(os.path.dirname(__file__), f)
+
+
+AUDIO_FILE = relpath("data/short.wav")
+ANNOTATION_FILE = relpath('data/test_annotation.csv')
+CONTOURS_FILE = relpath('data/contours.csv')
 
 
 def array_equal(array1, array2):
@@ -18,7 +29,7 @@ class TestContours(unittest.TestCase):
         self.freqs = np.array([440.0, 441.0, 50.0, 52.0, 55.0, 325.2])
         self.salience = np.array([0.2, 0.4, 0.5, 0.2, 0.4, 0.0])
         self.sample_rate = 10.0
-        self.audio_fpath = 'data/short.wav'
+        self.audio_fpath = AUDIO_FILE
         self.ctr = core.Contours(
             self.index, self.times, self.freqs, self.salience, self.sample_rate,
             self.audio_fpath
@@ -119,7 +130,7 @@ class TestContours(unittest.TestCase):
         self.assertTrue(array_equal(expected, actual))
 
     def test_compute_labels_default(self):
-        self.ctr.compute_labels('data/test_annotation.csv')
+        self.ctr.compute_labels(ANNOTATION_FILE)
         expected_overlaps = {0: 1.0, 1: 1.0/3.0, 2: 0.0}
         expected_labels = {0: 1, 1: 0, 2: 0}
         actual_overlaps = self.ctr._overlaps
@@ -129,7 +140,7 @@ class TestContours(unittest.TestCase):
 
     def test_compute_labels_default(self):
         self.ctr.compute_labels(
-            'data/test_annotation.csv', overlap_threshold=0.2
+            ANNOTATION_FILE, overlap_threshold=0.2
         )
         expected_overlaps = {0: 1.0, 1: 1.0/3.0, 2: 0.0}
         expected_labels = {0: 1, 1: 1, 2: 0}
@@ -169,11 +180,11 @@ class TestContours(unittest.TestCase):
 
     def test_save_target_contours_none(self):
         with self.assertRaises(ReferenceError):
-            self.ctr.save_target_contours('data/contours.csv')
+            self.ctr.save_target_contours(CONTOURS_FILE)
 
     def test_save_target_contours(self):
         self.ctr._scores = {0: 0.6, 1: 0.2, 2: 0.9}
-        fpath = 'data/target_contours.csv'
+        fpath = CONTOURS_FILE
         self.ctr.save_target_contours(fpath)
         expected = [
             [0, 0.0, 440.0, 0.4],
@@ -189,7 +200,7 @@ class TestContours(unittest.TestCase):
 
     def test_save(self):
         self.ctr._scores = {0: 0.6, 1: 0.2, 2: 0.9}
-        fpath = 'data/contours.csv'
+        fpath = CONTOURS_FILE
         self.ctr.save(fpath)
         expected = [
             [0, 0.0, 440.0, 0.4],
@@ -211,7 +222,8 @@ class TestValidateContours(unittest.TestCase):
 
     def test_valid(self):
         expected = None
-        acutal = core._validate_contours([0], [0], [0], [0])
+        actual = core._validate_contours([0], [0], [0], [0])
+        self.assertEqual(expected, actual)
 
     def test_invalid(self):
         with self.assertRaises(ValueError):
@@ -287,11 +299,96 @@ class TestLoadAnnotation(unittest.TestCase):
     def test_load_annotation(self):
         expected_times = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
         expected_freqs = np.array([440.0, 441.0, 55.0, 56.0, 57.0, 200.0])
-        actual_times, actual_freqs = core._load_annotation(
-            'data/test_annotation.csv'
-        )
+        actual_times, actual_freqs = core._load_annotation(ANNOTATION_FILE)
         self.assertTrue(array_equal(expected_times, actual_times))
         self.assertTrue(array_equal(expected_freqs, actual_freqs))
+
+@unittest.skip("Why aren't the extractors registering?")
+class TestExtractorRegistry(unittest.TestCase):
+
+    def test_keys(self):
+        actual = core.EXTRACTOR_REGISTRY.keys()
+        expected = ['hll', 'salamon']
+        self.assertEqual(expected, actual)
+
+    def test_types(self):
+        for val in core.EXTRACTOR_REGISTRY.values():
+            self.assertIsInstance(val, core.ContourExtractor)
+
+
+class TestContourExtractor(unittest.TestCase):
+
+    def setUp(self):
+        self.cex = core.ContourExtractor()
+
+    def test_inits(self):
+        self.assertTrue(self.cex.recompute)
+        self.assertTrue(self.cex.clean)
+
+    def test_compute_contours(self):
+        with self.assertRaises(NotImplementedError):
+            self.cex.compute_contours(AUDIO_FILE)
+
+    def test_get_id(self):
+        with self.assertRaises(NotImplementedError):
+            self.cex.get_id()
+
+    def test_preprocess_audio(self):
+        with self.assertRaises(NotImplementedError):
+            self.cex._preprocess_audio()
+
+    def test_post_process_contours(self):
+        with self.assertRaises(NotImplementedError):
+            self.cex._postprocess_contours()
+
+@unittest.skip("Why aren't the features registering?")
+class TestFeaturesRegistry(unittest.TestCase):
+
+    def test_keys(self):
+        actual = core.FEATURES_REGISTRY.keys()
+        expected = ['cesium', 'melodia', 'bitteli']
+        self.assertEqual(expected, actual)
+
+    def test_types(self):
+        for val in core.FEATURES_REGISTRY.values():
+            self.assertIsInstance(val, core.ContourFeatures)
+
+
+# class TestContourFeatures(unittest.TestCase):
+
+#     def setUp(self):
+#         self.ftr = core.ContourFeatures()
+
+#     def test_get_feature_vector(self):
+#         times = np.array([0])
+#         freqs = np.array([0])
+#         salience = np.array([0])
+#         sample_rate = 1
+#         with self.assertRaises(NotImplementedError):
+#             self.ftr.get_feature_vector(times, freqs, salience, sample_rate)
+
+#     def test_set_feature_names(self):
+#         with self.assertRaises(NotImplementedError):
+#             self.ftr.set_feature_names()
+
+#     def test_get_id(self):
+#         with self.assertRaises(NotImplementedError):
+#             self.ftr.get_id()
+
+#     def test_compute_all_feautres(self):
+#         pass
+
+@unittest.skip("Why aren't the classifiers registering?")
+class TestClassifierRegistry(unittest.TestCase):
+
+    def test_keys(self):
+        actual = core.CLASSIFIER_REGISTRY.keys()
+        expected = ['cesium', 'melodia', 'bitteli']
+        self.assertEqual(expected, actual)
+
+    def test_types(self):
+        for val in core.CLASSIFIER_REGISTRY.values():
+            self.assertIsInstance(val, core.Classifier)
 
 
 
