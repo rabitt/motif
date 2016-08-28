@@ -556,20 +556,21 @@ class ContourFeatures(six.with_metaclass(MetaContourFeatures)):
         get_feature_vector(self, times, freqs, salience, duration,
                            sample_rate)
             --> This should return a flat numpy array
-        set_feature_names(self)
+        feature_names(self)
             --> This should return a list of the same length as the above
             numpy array of what each dimension is. Can be as simple as an
             index, can be identfiers such as ['vibrato rate', 'vibrato extent']
     """
     def __init__(self):
-        self.feature_names = self.set_feature_names()
+        pass
 
     def get_feature_vector(self, times, freqs, salience, sample_rate):
         """Method for computing features for a given contour"""
         raise NotImplementedError("This method must contain the actual "
                                   "implementation of the contour feautres")
 
-    def set_feature_names(self):
+    @property
+    def feature_names(self):
         """Set the array of features names."""
         raise NotImplementedError("This method must create and return a list "
                                   "of feature names, the same length as the"
@@ -629,14 +630,20 @@ class Classifier(six.with_metaclass(MetaClassifier)):
     following methods:
         predict(X)
         fit(X, y)
-        set_threshold()
+        threshold()
             Should return a float whose determines the positive class threshold
             (e.g. score >= threshold --> positive class,
              score < threshold --> negative class)
     """
     def __init__(self):
-        self.threshold = self.set_threshold()
+        pass
 
+    @property
+    def threshold(self):
+        raise NotImplementedError("This method most return a float that "
+                                  "indicates the score cutoff between the "
+                                  "positive and negative class.")
+    
     def predict(self, X):
         """Method for predicting labels from input"""
         raise NotImplementedError("This method must contain the actual "
@@ -646,14 +653,6 @@ class Classifier(six.with_metaclass(MetaClassifier)):
         """Method for fitting the model"""
         raise NotImplementedError("This method must contain the actual "
                                   "implementation of the model fitting")
-
-    def set_threshold(self):
-        """Returns the float that determines the threhold between the positive
-        and negative class.
-        """
-        raise NotImplementedError("This method most return a float that "
-                                  "indicates the score cutoff between the "
-                                  "positive and negative class.")
 
     @classmethod
     def get_id(cls):

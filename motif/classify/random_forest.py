@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """ Classification using a random forrest
 """
+from __future__ import print_function
 from sklearn.ensemble import RandomForestClassifier as RFC
 from sklearn import cross_validation
 from sklearn.utils import shuffle
@@ -65,7 +66,8 @@ class RandomForest(Classifier):
         clf.fit(x_shuffle, y_shuffle)
         self.clf = clf
 
-    def set_threshold(self):
+    @property
+    def threshold(self):
         """Positive class is score >= 0.5"""
         return 0.5
 
@@ -108,7 +110,7 @@ class RandomForest(Classifier):
         """
         scores = []
         for max_depth in np.arange(5, max_search, step):
-            print "training with max_depth=%s" % max_depth
+            print("training with max_depth={}".format(max_depth))
             clf = RFC(n_estimators=n_estimators, max_depth=max_depth,
                       n_jobs=n_jobs, class_weight=class_weight,
                       max_features=max_features)

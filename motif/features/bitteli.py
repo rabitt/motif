@@ -42,7 +42,8 @@ class BitteliFeatures(ContourFeatures):
 
         return np.concatenate(features)
 
-    def set_feature_names(self):
+    @property
+    def feature_names(self):
         feature_names = [
             'vibrato rate',
             'vibrato extent',

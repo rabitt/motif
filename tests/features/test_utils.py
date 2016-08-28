@@ -1,8 +1,14 @@
+"""Tests for features.utils
+"""
+from __future__ import print_function
 import unittest
-import os
 import numpy as np
 
 from motif.features import utils
+
+import warnings
+warnings.simplefilter("error")
+
 
 def array_equal(array1, array2):
     return np.all(np.isclose(array1, array2))
@@ -148,6 +154,10 @@ class TestFitPoly(unittest.TestCase):
         self.assertTrue(array_equal(expected_approx, actual_approx))
         self.assertTrue(array_equal(expected_diff, actual_diff))
 
+    def test_too_short(self):
+        with self.assertRaises(ValueError):
+            utils._fit_poly(5, np.array([0.0, 1.0]))
+
 
 class TestFitNormalizedCosine(unittest.TestCase):
 
@@ -178,143 +188,101 @@ class TestComputeCoverageArray(unittest.TestCase):
 
     def test_uniform(self):
         y_sinfit_diff = 0.6 * np.ones((10, ))
-        n_intervals = 4
-        n_points = 10
+        cycle_length = 2
         vibrato_threshold = 0.8
         expected = np.ones((10, )).astype(bool)
         actual = utils._compute_coverage_array(
-            y_sinfit_diff, n_intervals, n_points, vibrato_threshold
+            y_sinfit_diff, cycle_length, vibrato_threshold
         )
-        print expected
-        print actual
         self.assertTrue(array_equal(expected, actual))
 
     def test_nonuniform(self):
-        y_sinfit_diff = np.array([0.0, 0.0, 0.0, 0.0, 0.2, 0.4, 0.0, 0.8])
-        n_intervals = 3
-        n_points = 8
-        vibrato_threshold = 0.2
-        expected = np.array([1, 1, 1, 1, 1, 1, 0, 0]).astype(bool)
+        y_sinfit_diff = np.array([
+            0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0,
+            0.0, 0.2, 0.4,
+            0.0, 0.8
+        ])
+        cycle_length = 3
+        vibrato_threshold = 0.3
+        expected = np.array([
+            1, 1, 1,
+            1, 1, 1,
+            1, 1, 1,
+            1, 1, 1,
+            0, 0
+        ]).astype(bool)
         actual = utils._compute_coverage_array(
-            y_sinfit_diff, n_intervals, n_points, vibrato_threshold
+            y_sinfit_diff, cycle_length, vibrato_threshold
         )
-        print expected
-        print actual
         self.assertTrue(array_equal(expected, actual))
 
-# class TestContourFeatures(unittest.TestCase):
-
-#     def setUp(self):
-#         self.times = np.array([0.0, 0.1, 0.2, 0.3])
-#         self.freqs_hz = np.array([440.0, 440.0, 440.0, 440.0])
-#         self.salience = np.array([0.5, 0.5, 0.5, 0.5])
-
-#     def test_init(self):
-#         cf = utils.ContourFeatures(
-#             self.times, self.freqs_hz, self.salience
-#         )
-#         actual_times = cf.times
-#         expected_times = np.array([0.0, 0.1, 0.2, 0.3])
-#         self.assertTrue(array_equal(expected_times, actual_times))
-
-#         actual_sample_rate = cf.sample_rate
-#         expected_sample_rate = 10
-#         self.assertEqual(expected_sample_rate, actual_sample_rate)
-
-#         actual_freqs_hz = cf.freqs_hz
-#         expected_freqs_hz = np.array([440.0, 440.0, 440.0, 440.0])
-#         self.assertTrue(array_equal(expected_freqs_hz, actual_freqs_hz))
-
-#         actual_freqs_cents = cf.freqs_cents
-#         expected_freqs_cents = np.array([
-#             4537.6316562295915, 4537.6316562295915,
-#             4537.6316562295915, 4537.6316562295915
-#         ])
-#         self.assertTrue(array_equal(expected_freqs_cents, actual_freqs_cents))
-
-#         actual_salience = cf.salience
-#         expected_salience = np.array([0.5, 0.5, 0.5, 0.5])
-#         self.assertTrue(array_equal(expected_salience, actual_salience))
-
-#     def test_get_freq_polynomial_coeffs(self):
-#         cf = utils.ContourFeatures(
-#             self.times, self.freqs_hz, self.salience
-#         )
-#         actual = cf.get_freq_polynomial_coeffs(
-#             n_poly_degrees=1
-#         )
-#         expected = np.array([1.0, 0.0, 0.0])
-#         self.assertTrue(array_equal(expected, actual))
-
-#     def test_get_salience_polynomail_coeffs(self):
-#         cf = utils.ContourFeatures(
-#             self.times, self.freqs_hz, self.salience
-#         )
-#         actual = cf.get_salience_polynomial_coeffs(
-#             n_poly_degrees=1
-#         )
-#         expected = np.array([1.0, 0.0, 0.0])
-#         self.assertTrue(array_equal(expected, actual))
-
-#     def test_get_vibrato_features(self):
-#         cf = utils.ContourFeatures(
-#             self.times, self.freqs_hz, self.salience
-#         )
-#         actual = cf.get_vibrato_features()
-#         expected = np.array([0.0, 0.0, 0.0])
-#         self.assertTrue(array_equal(expected, actual))
+    def test_too_short(self):
+        y_sinfit_diff = 0.6 * np.ones((10, ))
+        cycle_length = 4
+        vibrato_threshold = 0.8
+        expected = np.zeros((10, )).astype(bool)
+        actual = utils._compute_coverage_array(
+            y_sinfit_diff, cycle_length, vibrato_threshold
+        )
+        self.assertTrue(array_equal(expected, actual))
 
 
+class TestGetContourShapeFeatures(unittest.TestCase):
+
+    def test_line(self):
+        sample_rate = 2000
+        times = np.linspace(0, 1, sample_rate)
+        freqs = 1.2 * times + 440.0
+        expected = np.array([
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            440.0, 1.2, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0
+        ])
+        actual = utils.get_contour_shape_features(times, freqs, sample_rate)
+        self.assertTrue(array_equal(expected, actual))
+
+    def test_line_with_vib(self):
+        sample_rate = 2000
+        times = np.linspace(0, 1, sample_rate)
+        freqs = (1.2 * times + 440.0) + 7.3*np.cos(2.0 * np.pi * 12.0 * times)
+        expected = np.array([
+            12.0, 7.296015, 1.0, 1.0, 1.0, 1.0,
+            4.40586339e+02, -9.14578468e+00,
+            4.45852838e+01, -6.84789982e+01, 3.42394991e+01,
+            1.40143396e-11, 1.15390225e-01, 3.77435044e-03
+        ])
+        actual = utils.get_contour_shape_features(times, freqs, sample_rate)
+        self.assertTrue(array_equal(expected, actual))
 
 
+class TestVibratoEssentia(unittest.TestCase):
 
+    def test_flat(self):
+        freqs_cents = np.array([440.0, 440.0, 440.0, 440.0])
+        actual = utils.vibrato_essentia(freqs_cents, 44100)
+        expected = np.array([0, 0.0, 0.0, 0.0])
+        self.assertTrue(array_equal(expected, actual))
 
+    def test_pure_sine(self):
+        sample_rate = 2000
+        grid = np.linspace(0, 1, sample_rate)
+        freqs_cents = 50.0*np.sin(2.0*np.pi*12.0*grid) + 100.0
+        actual = utils.vibrato_essentia(freqs_cents, sample_rate)
+        expected = np.array([1, 10.21208791208791, 99.999587722367053, 1.0])
+        self.assertTrue(array_equal(expected, actual))
 
-
-# class TestVibratoFeatures(unittest.TestCase):
-
-#     def test_flat(self):
-#         freqs_cents = np.array([440.0, 440.0, 440.0, 440.0])
-#         expected_rate = 0.0
-#         expected_extent = 0.0
-#         expected_coverate = 0.0
-#         actual = utils.vibrato_features(freqs_cents, 44100)
-#         actual_rate = actual[0]
-#         actual_extent = actual[1]
-#         actual_coverage = actual[2]
-#         self.assertEqual(expected_rate, actual_rate)
-#         self.assertEqual(expected_extent, actual_extent)
-#         self.assertEqual(expected_coverate, actual_coverage)
-
-#     def test_pure_sine(self):
-#         sample_rate = 2000
-#         grid = np.linspace(0, 1, sample_rate)
-#         freqs_cents = 50.0*np.sin(2.0*np.pi*12.0*grid) + 100.0
-#         expected_rate = 10.21208791208791 #12.0
-#         expected_extent = 99.999587722367053 #100.0
-#         expected_coverage = 1.0
-#         actual = utils.vibrato_features(freqs_cents, sample_rate)
-#         actual_rate = actual[0]
-#         actual_extent = actual[1]
-#         actual_coverage = actual[2]
-#         self.assertEqual(expected_rate, actual_rate)
-#         self.assertEqual(expected_extent, actual_extent)
-#         self.assertEqual(expected_coverage, actual_coverage)
-
-#     def test_half_sine(self):
-#         sample_rate = 2000
-#         grid = np.linspace(0, 1, sample_rate)
-#         freqs_cents = 50.0*np.sin(2.0*np.pi*12.0*grid) + 100.0
-#         freqs_cents[0:sample_rate / 2] = 100.0
-#         expected_rate = 9.3293730317778376 #12.0
-#         expected_extent = 94.408366757784748 #100.0
-#         expected_coverage = 0.76769230769230767 # 0.5
-#         actual = utils.vibrato_features(freqs_cents, sample_rate)
-#         actual_rate = actual[0]
-#         actual_extent = actual[1]
-#         actual_coverage = actual[2]
-#         self.assertEqual(expected_rate, actual_rate)
-#         self.assertEqual(expected_extent, actual_extent)
-#         self.assertEqual(expected_coverage, actual_coverage)
-
-
+    def test_half_sine(self):
+        sample_rate = 2000
+        grid = np.linspace(0, 1, sample_rate)
+        freqs_cents = 50.0*np.sin(2.0*np.pi*12.0*grid) + 100.0
+        freqs_cents[0:1000] = 100.0
+        actual = utils.vibrato_essentia(freqs_cents, sample_rate)
+        expected = np.array([
+            1, 9.34, 94.408366757784748, 0.76769230769230767
+        ])
+        self.assertAlmostEqual(expected[0], actual[0], places=1)
+        self.assertAlmostEqual(expected[1], actual[1], places=1)
+        self.assertAlmostEqual(expected[2], actual[2], places=1)
+        self.assertAlmostEqual(expected[3], actual[3], places=1)

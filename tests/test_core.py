@@ -303,17 +303,17 @@ class TestLoadAnnotation(unittest.TestCase):
         self.assertTrue(array_equal(expected_times, actual_times))
         self.assertTrue(array_equal(expected_freqs, actual_freqs))
 
-@unittest.skip("Why aren't the extractors registering?")
+
 class TestExtractorRegistry(unittest.TestCase):
 
     def test_keys(self):
-        actual = core.EXTRACTOR_REGISTRY.keys()
-        expected = ['hll', 'salamon']
+        actual = sorted(core.EXTRACTOR_REGISTRY.keys())
+        expected = sorted(['hll', 'salamon'])
         self.assertEqual(expected, actual)
 
     def test_types(self):
         for val in core.EXTRACTOR_REGISTRY.values():
-            self.assertIsInstance(val, core.ContourExtractor)
+            self.assertTrue(issubclass(val, core.ContourExtractor))
 
 
 class TestContourExtractor(unittest.TestCase):
@@ -341,57 +341,75 @@ class TestContourExtractor(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             self.cex._postprocess_contours()
 
-@unittest.skip("Why aren't the features registering?")
+
 class TestFeaturesRegistry(unittest.TestCase):
 
     def test_keys(self):
-        actual = core.FEATURES_REGISTRY.keys()
-        expected = ['cesium', 'melodia', 'bitteli']
+        actual = sorted(core.FEATURES_REGISTRY.keys())
+        expected = sorted(['cesium', 'melodia', 'bitteli'])
         self.assertEqual(expected, actual)
 
     def test_types(self):
         for val in core.FEATURES_REGISTRY.values():
-            self.assertIsInstance(val, core.ContourFeatures)
+            self.assertTrue(issubclass(val, core.ContourFeatures))
 
 
-# class TestContourFeatures(unittest.TestCase):
+class TestContourFeatures(unittest.TestCase):
 
-#     def setUp(self):
-#         self.ftr = core.ContourFeatures()
+    def setUp(self):
+        self.ftr = core.ContourFeatures()
 
-#     def test_get_feature_vector(self):
-#         times = np.array([0])
-#         freqs = np.array([0])
-#         salience = np.array([0])
-#         sample_rate = 1
-#         with self.assertRaises(NotImplementedError):
-#             self.ftr.get_feature_vector(times, freqs, salience, sample_rate)
+    def test_get_feature_vector(self):
+        times = np.array([0])
+        freqs = np.array([0])
+        salience = np.array([0])
+        sample_rate = 1
+        with self.assertRaises(NotImplementedError):
+            self.ftr.get_feature_vector(times, freqs, salience, sample_rate)
 
-#     def test_set_feature_names(self):
-#         with self.assertRaises(NotImplementedError):
-#             self.ftr.set_feature_names()
+    def test_set_feature_names(self):
+        with self.assertRaises(NotImplementedError):
+            self.ftr.feature_names
 
-#     def test_get_id(self):
-#         with self.assertRaises(NotImplementedError):
-#             self.ftr.get_id()
+    def test_get_id(self):
+        with self.assertRaises(NotImplementedError):
+            self.ftr.get_id()
 
-#     def test_compute_all_feautres(self):
-#         pass
+    def test_compute_all_feautres(self):
+        pass
 
-@unittest.skip("Why aren't the classifiers registering?")
+
 class TestClassifierRegistry(unittest.TestCase):
 
     def test_keys(self):
-        actual = core.CLASSIFIER_REGISTRY.keys()
-        expected = ['cesium', 'melodia', 'bitteli']
+        actual = sorted(core.CLASSIFIER_REGISTRY.keys())
+        expected = sorted(['mv_gaussian', 'random_forest'])
         self.assertEqual(expected, actual)
 
     def test_types(self):
         for val in core.CLASSIFIER_REGISTRY.values():
-            self.assertIsInstance(val, core.Classifier)
+            self.assertTrue(issubclass(val, core.Classifier))
 
 
+class TestClassifier(unittest.TestCase):
 
+    def setUp(self):
+        self.clf = core.Classifier()
 
+    def test_threshold(self):
+        with self.assertRaises(NotImplementedError):
+            self.clf.threshold
+
+    def test_predict(self):
+        with self.assertRaises(NotImplementedError):
+            self.clf.predict(np.array([0, 1]))
+
+    def test_fit(self):
+        with self.assertRaises(NotImplementedError):
+            self.clf.fit(np.array([0, 1]), np.array([0]))
+
+    def test_get_id(self):
+        with self.assertRaises(NotImplementedError):
+            self.clf.get_id()
 
 

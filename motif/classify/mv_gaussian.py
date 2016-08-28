@@ -76,7 +76,8 @@ class MvGaussian(Classifier):
         self.rv_pos = rv_pos
         self.rv_neg = rv_neg
 
-    def set_threshold(self):
+    @property
+    def threshold(self):
         """Positive class is score >= 1.0"""
         return 1.0
 
@@ -118,6 +119,6 @@ class MvGaussian(Classifier):
         X_boxcox = np.zeros(X.shape)
         for i in range(self.n_feats):
             X_boxcox[:, i] = boxcox(
-                X[:, i] + EPS, lmbda=self.lmbda
+                X[:, i] + EPS, lmbda=self.lmbda[i]
             )
         return X_boxcox
