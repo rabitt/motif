@@ -10,7 +10,13 @@ python:
 addons:
   apt:
     packages:
-    - motif
+    - sox
+
+before_install:
+    - bash .travis_dependencies.sh
+    - export PATH="$HOME/env/miniconda$TRAVIS_PYTHON_VERSION/bin:$PATH";
+    - hash -r
+    - source activate test-environment
 
 # command to install dependencies
 install:
@@ -18,7 +24,7 @@ install:
   - pip install -e .
 
 # command to run tests
-script: nosetests --with-coverage --cover-erase --cover-package=sox -v -w tests/
+script: nosetests --with-coverage --cover-erase --cover-package=motif -v -w tests/
 
 after_success:
     - coveralls

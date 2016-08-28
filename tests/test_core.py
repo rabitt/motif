@@ -18,7 +18,7 @@ class TestContours(unittest.TestCase):
         self.freqs = np.array([440.0, 441.0, 50.0, 52.0, 55.0, 325.2])
         self.salience = np.array([0.2, 0.4, 0.5, 0.2, 0.4, 0.0])
         self.sample_rate = 10.0
-        self.audio_fpath = 'tests/data/short.wav'
+        self.audio_fpath = 'data/short.wav'
         self.ctr = core.Contours(
             self.index, self.times, self.freqs, self.salience, self.sample_rate,
             self.audio_fpath
@@ -74,7 +74,7 @@ class TestContours(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_index_mapping(self):
-        expected = {0: [0, 1], 1: [2, 3, 4], 2: [5]}
+        expected = {0: range(0, 2), 1: range(2, 5), 2: range(5,6)}
         actual = self.ctr.index_mapping
         self.assertEqual(expected, actual)
 
@@ -119,7 +119,7 @@ class TestContours(unittest.TestCase):
         self.assertTrue(array_equal(expected, actual))
 
     def test_compute_labels_default(self):
-        self.ctr.compute_labels('tests/data/test_annotation.csv')
+        self.ctr.compute_labels('data/test_annotation.csv')
         expected_overlaps = {0: 1.0, 1: 1.0/3.0, 2: 0.0}
         expected_labels = {0: 1, 1: 0, 2: 0}
         actual_overlaps = self.ctr._overlaps
@@ -129,7 +129,7 @@ class TestContours(unittest.TestCase):
 
     def test_compute_labels_default(self):
         self.ctr.compute_labels(
-            'tests/data/test_annotation.csv', overlap_threshold=0.2
+            'data/test_annotation.csv', overlap_threshold=0.2
         )
         expected_overlaps = {0: 1.0, 1: 1.0/3.0, 2: 0.0}
         expected_labels = {0: 1, 1: 1, 2: 0}
@@ -169,11 +169,11 @@ class TestContours(unittest.TestCase):
 
     def test_save_target_contours_none(self):
         with self.assertRaises(ReferenceError):
-            self.ctr.save_target_contours('tests/data/contours.csv')
+            self.ctr.save_target_contours('data/contours.csv')
 
     def test_save_target_contours(self):
         self.ctr._scores = {0: 0.6, 1: 0.2, 2: 0.9}
-        fpath = 'tests/data/target_contours.csv'
+        fpath = 'data/target_contours.csv'
         self.ctr.save_target_contours(fpath)
         expected = [
             [0, 0.0, 440.0, 0.4],
@@ -189,7 +189,7 @@ class TestContours(unittest.TestCase):
 
     def test_save(self):
         self.ctr._scores = {0: 0.6, 1: 0.2, 2: 0.9}
-        fpath = 'tests/data/contours.csv'
+        fpath = 'data/contours.csv'
         self.ctr.save(fpath)
         expected = [
             [0, 0.0, 440.0, 0.4],
@@ -279,8 +279,6 @@ class TestGetSnippetIdx(unittest.TestCase):
         full_array = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
         expected = np.array([False, False, True, True, True, False])
         actual = core._get_snippet_idx(snippet, full_array)
-        print expected
-        print actual
         self.assertTrue(array_equal(expected, actual))
 
 
@@ -290,7 +288,7 @@ class TestLoadAnnotation(unittest.TestCase):
         expected_times = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
         expected_freqs = np.array([440.0, 441.0, 55.0, 56.0, 57.0, 200.0])
         actual_times, actual_freqs = core._load_annotation(
-            'tests/data/test_annotation.csv'
+            'data/test_annotation.csv'
         )
         self.assertTrue(array_equal(expected_times, actual_times))
         self.assertTrue(array_equal(expected_freqs, actual_freqs))

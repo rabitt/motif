@@ -28,11 +28,15 @@ if __name__ == "__main__":
         license='MIT',
 
         install_requires=[
-            'numpy',
-            'cesium',
+            'six',
+            'numpy >= 1.8.0',
+            'scipy >= 0.13.0',
+            'scikit-learn >= 0.14.0',
+            'matplotlib',
+            'seaborn',
             'librosa',
             'mir_eval',
-            'sklearn'
+            'sox'
         ],
 
         extras_require={

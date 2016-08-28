@@ -1,6 +1,6 @@
 """Features from cesium module.
 """
-from cesium import science_feature_tools
+# from cesium import science_feature_tools
 from motif.core import ContourFeatures
 import numpy as np
 
