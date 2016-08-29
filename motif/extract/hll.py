@@ -5,11 +5,38 @@ import numpy as np
 import csv
 import os
 import tempfile as tmp
+import subprocess
+from subprocess import CalledProcessError
+
 from motif.core import ContourExtractor
 from motif.core import Contours
 
 
+def _check_binary():
+    '''Check if the vamp plugin is available and can be called.
+
+    Returns
+    -------
+    True if callable, False otherwise
+    '''
+    hll_exists = True
+    try:
+        subprocess.check_output(['which', 'run-hll'])
+    except CalledProcessError:
+        hll_exists = False
+
+    return hll_exists
+
+
+BINARY_AVAILABLE = _check_binary()
+
+
 class HLL(ContourExtractor):
+
+    @property
+    def sample_rate(self):
+        """Sample rate of output contours"""
+        return 256.0/44100.0
 
     @classmethod
     def get_id(cls):
@@ -32,6 +59,18 @@ class HLL(ContourExtractor):
         -------
         Instance of Contours object
         """
+
+        if not BINARY_AVAILABLE:
+            raise EnvironmentError(
+                "Either the binary {} needed to compute these contours is "
+                "not available."
+            )
+
+        if not os.path.exists(audio_filepath):
+            raise IOError(
+                "The audio file {} does not exist".format(audio_filepath)
+            )
+
         if self.recompute:
             output_file_object = tmp.NamedTemporaryFile('csv')
             output_path = output_file_object.name
@@ -43,7 +82,7 @@ class HLL(ContourExtractor):
 
         if not os.path.exists(output_path):
             args = [
-                "run_hll",
+                "run-hll",
                 "{}".format(audio_filepath), "{}".format(output_path.name)
             ]
             os.system(' '.join(args))
@@ -58,7 +97,9 @@ class HLL(ContourExtractor):
         if self.clean:
             os.remove(output_path)
 
-        return Contours(c_numbers, c_times, c_freqs, c_sal)
+        return Contours(
+            c_numbers, c_times, c_freqs, c_sal, self.sample_rate, audio_filepath
+        )
 
 
 def _load_contours(fpath):

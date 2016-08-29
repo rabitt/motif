@@ -42,7 +42,8 @@ class BitteliFeatures(ContourFeatures):
 
         return np.concatenate(features)
 
-    def set_feature_names(self):
+    @property
+    def feature_names(self):
         feature_names = [
             'vibrato rate',
             'vibrato extent',
@@ -64,6 +65,7 @@ class BitteliFeatures(ContourFeatures):
             '3rd polynomial coeff - salience',
             '4th polynomial coeff - salience',
             '5th polynomial coeff - salience',
+            'polynomial fit residual - salience',
             'onset',
             'offset',
             'duration',

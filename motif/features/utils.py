@@ -6,6 +6,7 @@ Each function returns a flattened numpy array for easy concatenation.
 
 @author: mariapanteli, rabitt
 """
+from __future__ import print_function
 import librosa
 import numpy as np
 import numpy.polynomial.polynomial as Poly
@@ -155,7 +156,7 @@ def get_total_variation(signal):
     total_variation : float
         The total variation of the signal
     '''
-    return np.sum(np.abs(signal[1:] - signal[:-1]))
+    return np.array([np.sum(np.abs(signal[1:] - signal[:-1]))])
 
 
 def get_polynomial_fit_features(times, signal, n_deg=5, norm=False):
@@ -187,7 +188,7 @@ def get_polynomial_fit_features(times, signal, n_deg=5, norm=False):
     poly_coeff, _, residual = _fit_poly(
         n_deg, signal, grid=times, norm=norm
     )
-    return np.concatenate([poly_coeff, np.linalg.norm(residual)])
+    return np.concatenate([poly_coeff, [np.linalg.norm(residual)]])
 
 
 def _fit_poly(n_poly_degrees, signal, grid=None, norm=False):
@@ -277,19 +278,16 @@ def _fit_normalized_cosine(x, y, min_freq, max_freq, step):
     return freq, phase
 
 
-def _compute_coverage_array(y_sinfit_diff, n_intervals, n_points,
-                            vibrato_threshold):
+def _compute_coverage_array(y_sinfit_diff, cycle_length, vibrato_threshold):
     '''Given an array of residual differences, compute the vibrato coverage
-    over time by splitting the interval up into n_intervals chunks.
+    over time by splitting the interval up chunks of size cycle_length.
 
     Parameters
     ----------
     y_sinfit_diff : np.array
         Array of residual differences between 0 and 1.
-    n_intervals : float
+    cycle_length : float
         Optimal number of intervals for the estimated vibrato frequency
-    n_points : int
-        Number of points in the contour
     vibrato_threshold : float
         Value between 0 and 1 to determine whether the fit is good enough.
 
@@ -298,23 +296,31 @@ def _compute_coverage_array(y_sinfit_diff, n_intervals, n_points,
     coverage : np.array
         Array of booleans indicating if the current frame contains vibrato.
     '''
+    n_points = len(y_sinfit_diff)
     half_period_idx = list(
         np.round(
-            n_intervals * np.arange(0, int(np.ceil(n_points / n_intervals)))
+            cycle_length * np.arange(
+                0, int(np.ceil(float(n_points) / float(cycle_length)) + 1)
+            )
         ).astype(int)
     )
-    half_period_idx.append(n_points)
+
+    if half_period_idx[-1] > n_points:
+        half_period_idx = half_period_idx[:-1]
+
+    if half_period_idx[-1] < n_points:
+        half_period_idx.append(n_points)
+
     # compute the goodness of fit for each half period
     diff_thresh = np.zeros(y_sinfit_diff.shape)
-    coverage = np.zeros(y_sinfit_diff.shape)
     diffs = np.zeros((len(half_period_idx) - 1, ))
     for k, (i, j) in enumerate(zip(half_period_idx[:-1], half_period_idx[1:])):
         diffs[k] = np.mean(y_sinfit_diff[i:j])
         diff_thresh[i:j] = diffs[k]
 
     # vibrato is active when the fit diff is below a threshold
-    coverage = diff_thresh <= vibrato_threshold
-    diff_coverage = [d <= vibrato_threshold for d in diffs]
+    coverage = np.less_equal(diff_thresh, vibrato_threshold)
+    diff_coverage = np.less_equal(diffs, vibrato_threshold)
 
     # If vibrato is active for less than 2 full periods, set coverage to None
     if sum(diff_coverage) <= 3:
@@ -387,9 +393,9 @@ def get_contour_shape_features(times, freqs, sample_rate, poly_degree=5,
     y_sinfit_diff = np.abs(y_sin - y_sinfit)
 
     # compute vibrato coverage
-    n_intervals = 0.5 * ((sample_rate) / vib_freq)
+    cycle_length = 0.5 * ((sample_rate) / vib_freq)
     coverage = _compute_coverage_array(
-        y_sinfit_diff, n_intervals, n_points, vibrato_threshold
+        y_sinfit_diff, cycle_length, vibrato_threshold
     )
 
     # compute percentage of coverage
@@ -409,8 +415,8 @@ def get_contour_shape_features(times, freqs, sample_rate, poly_degree=5,
     y_modelfit = y_vib + y_poly
 
     # compute residuals
-    polyfit_residual = np.linalg.norm(y_diff)
-    modelfit_residual = np.linalg.norm(freqs - y_modelfit)
+    polyfit_residual = np.linalg.norm(y_diff)/float(n_points)
+    modelfit_residual = np.linalg.norm(freqs - y_modelfit)/float(n_points)
 
     # aggregate features
     thirds = int(np.round(n_points / 3.0))
@@ -465,6 +471,7 @@ def vibrato_essentia(freqs, sample_rate, hop_size=1):
 
         spec = np.abs(np.fft.fft(contour_segment, n=fft_size))
         peak_inds = librosa.util.peak_pick(spec, 3, 3, 3, 5, 0.5, 10)
+
         # top 3 peaks
         if len(peak_inds) > 0:
             top_peak_idx = np.argsort(spec[peak_inds])[::-1][:3]
@@ -483,17 +490,14 @@ def vibrato_essentia(freqs, sample_rate, hop_size=1):
             # append '1' if current frame has vibrato
             coverage.append(1.0)
 
-    try:
-        rate = np.mean(rate) if len(rate) > 0 else 0.0
-        extent = np.mean(extent) if len(extent) > 0 else 0.0
-        coverage = sum(coverage) / n_frames if len(coverage) > 0 else 0.0
-        vib_params = [rate, extent, coverage]
-    except:
-        vib_params = [0.0, 0.0, 0.0]  # default 0's if no vibrato
+    rate = np.mean(rate) if len(rate) > 0 else 0.0
+    extent = np.mean(extent) if len(extent) > 0 else 0.0
+    coverage = sum(coverage) / n_frames if len(coverage) > 0 else 0.0
+    vib_params = [rate, extent, coverage]
 
     if vib_params == [0.0, 0.0, 0.0]:
-        feats = np.array([0].extend(vib_params))
+        feats = np.array([0] + vib_params)
     else:
-        feats = np.array([1].extend(vib_params))
+        feats = np.array([1] + vib_params)
 
     return feats
