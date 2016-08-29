@@ -2,8 +2,8 @@
 """ Evaluate the output of the decoder.
 TODO: This is old and hacky, make it nice!
 """
-from __future__ import print_function
-import os
+# from __future__ import print_function
+# import os
 
 # #TODO: actually write this
 # def score():
