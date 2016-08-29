@@ -348,6 +348,24 @@ class Contours(object):
 
 
 def _validate_contours(index, times, freqs, salience):
+    '''Check that contour input is well formed.
+
+    Parameters
+    ----------
+    index : np.array
+        Array of contour numbers
+    times : np.array
+        Array of contour times
+    freqs : np.array
+        Array of contour frequencies
+    salience : np.array
+        Array of contour saliences
+    sample_rate : float
+        Contour sample rate.
+    audio_filepath : str
+        Path to audio file contours were extracted from
+
+    '''
     N = len(index)
     if any([len(times) != N, len(freqs) != N, len(salience) != N]):
         raise ValueError(
@@ -646,6 +664,7 @@ class Classifier(six.with_metaclass(MetaClassifier)):
 
     @property
     def threshold(self):
+        """Property for setting threshold between classes"""
         raise NotImplementedError("This method most return a float that "
                                   "indicates the score cutoff between the "
                                   "positive and negative class.")
