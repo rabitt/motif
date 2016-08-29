@@ -120,9 +120,3 @@ class TestRandomForest(unittest.TestCase):
             expected['confusion matrix'], actual['confusion matrix']
         ))
         self.assertEqual(expected['auc score'], actual['auc score'])
-
-
-
-
-
-

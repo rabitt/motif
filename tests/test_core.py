@@ -1,11 +1,13 @@
+"""Tests for motif/core.py
+"""
 import unittest
 import csv
 import os
 import numpy as np
 
 from motif import core
-from motif import features
-
+# from motif import features
+# from motif import MvGaussian
 
 
 def relpath(f):
@@ -85,7 +87,7 @@ class TestContours(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_index_mapping(self):
-        expected = {0: range(0, 2), 1: range(2, 5), 2: range(5,6)}
+        expected = {0: range(0, 2), 1: range(2, 5), 2: range(5, 6)}
         actual = self.ctr.index_mapping
         self.assertEqual(expected, actual)
 
@@ -154,6 +156,10 @@ class TestContours(unittest.TestCase):
 
     def test_compute_scores(self):
         pass
+        # clf = MvGaussian()
+        # X = np.array([[1.0, 2.0], [0.0, 0.0], [0.5, 0.7]])
+        # Y = np.array([1, 1, 0])
+        # clf.fit(X, Y)
 
     def test_stack_features_none(self):
         with self.assertRaises(ReferenceError):
@@ -325,13 +331,17 @@ class TestContourExtractor(unittest.TestCase):
         self.assertTrue(self.cex.recompute)
         self.assertTrue(self.cex.clean)
 
-    def test_compute_contours(self):
+    def test_sample_rate(self):
         with self.assertRaises(NotImplementedError):
-            self.cex.compute_contours(AUDIO_FILE)
+            self.cex.sample_rate
 
     def test_get_id(self):
         with self.assertRaises(NotImplementedError):
             self.cex.get_id()
+
+    def test_compute_contours(self):
+        with self.assertRaises(NotImplementedError):
+            self.cex.compute_contours(AUDIO_FILE)
 
     def test_preprocess_audio(self):
         with self.assertRaises(NotImplementedError):
