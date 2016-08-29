@@ -4,11 +4,40 @@
 import csv
 import numpy as np
 import os
+import subprocess
+from subprocess import CalledProcessError
 
 from motif.core import ContourExtractor
 from motif.core import Contours
 
-SALAMON_CONTOUR_STRING = "vamp_melodia-contours_melodia-contours_contoursall"
+OUTPUT_FILE_STRING = "vamp_melodia-contours_melodia-contours_contoursall"
+VAMP_PLUGIN = "vamp:melodia-contours:melodia-contours:contoursall"
+
+
+def _check_binary():
+    '''Check if the vamp plugin is available and can be called.
+
+    Returns
+    -------
+    True if callable, False otherwise
+    '''
+    sonic_annotator_exists = True
+    try:
+        subprocess.check_output(['which', 'sonic-annotator'])
+    except CalledProcessError:
+        sonic_annotator_exists = False
+
+    if sonic_annotator_exists:
+        avail_plugins = subprocess.check_output(["sonic-annotator", "-l"])
+        if VAMP_PLUGIN in avail_plugins:
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
+BINARY_AVAILABLE = _check_binary()
 
 
 class Salamon(ContourExtractor):
@@ -37,17 +66,29 @@ class Salamon(ContourExtractor):
         Returns
         -------
         Instance of Contours object
+
         """
+        if not BINARY_AVAILABLE:
+            raise EnvironmentError(
+                "Either the vamp plugin {} needed to compute these contours or "
+                "sonic-annotator is not available.".format(VAMP_PLUGIN)
+            )
+
+        if not os.path.exists(audio_filepath):
+            raise IOError(
+                "The audio file {} does not exist".format(audio_filepath)
+            )
+
         input_file_name = os.path.basename(audio_filepath)
         output_file_name = "{}_{}.csv".format(
-            input_file_name.split('.')[0], SALAMON_CONTOUR_STRING
+            input_file_name.split('.')[0], OUTPUT_FILE_STRING
         )
         output_dir = os.path.dirname(audio_filepath)
         output_path = os.path.join(output_dir, output_file_name)
         if self.recompute or not os.path.exists(output_path):
             args = [
                 "sonic-annotator", "-d", 
-                "vamp:melodia-contours:melodia-contours:contoursall",
+                VAMP_PLUGIN,
                 "{}".format(audio_filepath), "-w", "csv", "--csv-force"
             ]
             os.system(' '.join(args))

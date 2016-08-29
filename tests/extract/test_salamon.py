@@ -19,6 +19,8 @@ def relpath(f):
 AUDIO_FILE = relpath("../data/short.wav")
 CONTOURS = relpath("../data/short_contours_salamon.csv")
 
+SKIP_CONDITION = (not salamon.BINARY_AVAILABLE)
+
 
 class TestSalamon(unittest.TestCase):
 
@@ -30,14 +32,20 @@ class TestSalamon(unittest.TestCase):
         actual = self.etr.get_id()
         self.assertEqual(expected, actual)
 
-    @unittest.skip("Binary doesn't exist on remote machine.")
+    @unittest.skipIf(SKIP_CONDITION, "salamon binary not available")
     def test_compute_contours(self):
         ctr = self.etr.compute_contours(AUDIO_FILE)
         self.assertTrue(isinstance(ctr, Contours))
 
+    @unittest.skipIf(SKIP_CONDITION, "salamon binary not available")
     def test_failed_compute_contours(self):
         with self.assertRaises(IOError):
             self.etr.compute_contours('does/not/exist.wav')
+
+    @unittest.skipIf(not SKIP_CONDITION, "binary is available")
+    def test_binary_unavailable(self):
+        with self.assertRaises(EnvironmentError):
+            self.etr.compute_contours('does/not/exist')
 
 
 class TestLoadContours(unittest.TestCase):
