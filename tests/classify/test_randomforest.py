@@ -4,35 +4,57 @@ from __future__ import print_function
 import unittest
 import numpy as np
 
-from motif.classify import mv_gaussian
+from motif.classify import random_forest
 
 def array_equal(array1, array2):
     return np.all(np.isclose(array1, array2))
 
 
-class TestMvGaussian(unittest.TestCase):
+class TestRandomForest(unittest.TestCase):
 
     def setUp(self):
-        self.clf = mv_gaussian.MvGaussian()
+        self.clf = random_forest.RandomForest(
+            n_estimators=2, max_param=15
+        )
 
-    def test_rv_pos(self):
-        expected = None
-        actual = self.clf.rv_pos
+    def test_n_estimators(self):
+        expected = 2
+        actual = self.clf.n_estimators
         self.assertEqual(expected, actual)
 
-    def test_rv_neg(self):
-        expected = None
-        actual = self.clf.rv_neg
+    def test_n_jobs(self):
+        expected = -1
+        actual = self.clf.n_jobs
         self.assertEqual(expected, actual)
 
-    def test_n_feats(self):
-        expected = None
-        actual = self.clf.n_feats
+    def test_class_weight(self):
+        expected = 'auto'
+        actual = self.clf.class_weight
         self.assertEqual(expected, actual)
 
-    def test_lmbda(self):
+    def test_max_features(self):
         expected = None
-        actual = self.clf.lmbda
+        actual = self.clf.max_features
+        self.assertEqual(expected, actual)
+
+    def test_max_param(self):
+        expected = 15
+        actual = self.clf.max_param
+        self.assertEqual(expected, actual)
+
+    def test_param_step(self):
+        expected = 5
+        actual = self.clf.param_step
+        self.assertEqual(expected, actual)
+
+    def test_clf(self):
+        expected = None
+        actual = self.clf.clf
+        self.assertEqual(expected, actual)
+
+    def test_max_depth(self):
+        expected = None
+        actual = self.clf.max_depth
         self.assertEqual(expected, actual)
 
     def test_predict_error(self):
@@ -40,36 +62,42 @@ class TestMvGaussian(unittest.TestCase):
             self.clf.predict(np.array([0, 0, 0]))
 
     def test_fit(self):
-        X = np.array([[1.0, 2.0], [0.0, 0.0], [0.5, 0.7]])
-        Y = np.array([1, 1, 0])
+        X = np.array([
+            [1.0, 2.0], [0.0, 0.0], [0.5, 0.7],
+            [0.0, 0.0], [1.0, 2.5], [-1.0, 2.1],
+            [1.2, 1.2], [1.0, 1.0], [4.0, 0.0],
+            [-1.0, -1.0]
+        ])
+        Y = np.array([0, 1, 0, 1, 0, 0, 1, 1, 0, 1])
         self.clf.fit(X, Y)
-        self.assertIsNotNone(self.clf.rv_pos)
-        self.assertIsNotNone(self.clf.rv_neg)
-        self.assertEqual(self.clf.n_feats, 2)
-        self.assertIsNotNone(self.clf.lmbda)
+        self.assertIsNotNone(self.clf.clf)
+        self.assertIsNotNone(self.clf.max_depth)
 
     def test_predict(self):
-        X = np.array([[1.0, 2.0], [1.0, 2.0], [0.5, 0.7]])
-        Y = np.array([1, 1, 0])
+        X = np.array([
+            [1.0, 2.0], [0.0, 0.0], [0.5, 0.7],
+            [0.0, 0.0], [1.0, 2.5], [-1.0, 2.1],
+            [1.2, 1.2], [1.0, 1.0], [4.0, 0.0],
+            [-1.0, -1.0]
+        ])
+        Y = np.array([0, 1, 0, 1, 0, 0, 1, 1, 0, 1])
         self.clf.fit(X, Y)
-        actual = self.clf.predict(
-            np.array([[1.0, 2.0], [1.0, 2.0], [0.5, 0.7]])
+        self.clf.predict(
+            np.array([[1.0, 2.0], [1.0, 3.0], [-2.0, -2.0]])
         )
-        expected = np.array([np.inf, np.inf, 2.71818876])
-        self.assertTrue(array_equal(expected, actual))
 
     def test_threshold(self):
-        expected = 1.0
+        expected = 0.5
         actual = self.clf.threshold
         self.assertEqual(expected, actual)
 
     def test_get_id(self):
-        expected = 'mv_gaussian'
+        expected = 'random_forest'
         actual = self.clf.get_id()
         self.assertEqual(expected, actual)
 
     def test_score(self):
-        predicted_scores = np.array([0.0, 0.5, np.inf, 1.0, 2.0])
+        predicted_scores = np.array([0.0, 0.25, 1.0, 0.5, 0.9])
         y_target = np.array([0, 0, 1, 1, 1])
         expected = {
             'accuracy': 1.0,
@@ -92,3 +120,9 @@ class TestMvGaussian(unittest.TestCase):
             expected['confusion matrix'], actual['confusion matrix']
         ))
         self.assertEqual(expected['auc score'], actual['auc score'])
+
+
+
+
+
+
