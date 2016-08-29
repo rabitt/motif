@@ -502,16 +502,22 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
         self.recompute = True
         self.clean = True
 
-    def compute_contours(self, audio_filepath):
-        """Method for computing features for given audio file"""
-        raise NotImplementedError("This method must contain the actual "
-                                  "implementation of the contour extraction")
+    @property
+    def sample_rate(self):
+        """Property to get the sample rate of the output contours"""
+        raise NotImplementedError("This property must return the sample rate "
+                                  "of the output contours.")
 
     @classmethod
     def get_id(cls):
         """Method to get the id of the extractor type"""
         raise NotImplementedError("This method must return a string identifier"
                                   " of the contour extraction type")
+
+    def compute_contours(self, audio_filepath):
+        """Method for computing features for given audio file"""
+        raise NotImplementedError("This method must contain the actual "
+                                  "implementation of the contour extraction")
 
     def _preprocess_audio(self, normalize=True, equal_loudness_filter=False,
                           hpss=False):

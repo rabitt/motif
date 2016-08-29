@@ -11,6 +11,11 @@ from motif.core import Contours
 
 class HLL(ContourExtractor):
 
+    @property
+    def sample_rate(self):
+        """Sample rate of output contours"""
+        return 256.0/44100.0
+
     @classmethod
     def get_id(cls):
         """Identifier of this extractor."""
@@ -58,7 +63,9 @@ class HLL(ContourExtractor):
         if self.clean:
             os.remove(output_path)
 
-        return Contours(c_numbers, c_times, c_freqs, c_sal)
+        return Contours(
+            c_numbers, c_times, c_freqs, c_sal, self.sample_rate, audio_filepath
+        )
 
 
 def _load_contours(fpath):
