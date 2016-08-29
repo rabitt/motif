@@ -1,13 +1,36 @@
-# class TestTimeSeriesFeatures(unittest.TestCase):
+"""Test motif.features.cesium
+"""
+import unittest
+import numpy as np
 
-#     def test_even_grid(self):
-#         times = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
-#         freqs = np.array([440.0, 440.0, 440.0, 440.0, 440.0, 440.0, 440.0])
-#         sal = np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
-#         utils.time_series_features(times, freqs, sal)
+from motif.features import cesium
 
-#     def test_uneven_grid(self):
-#         times = np.array([0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6])
-#         freqs = np.array([440.0, 440.0, 440.0, 440.0, 440.0, 440.0, 440.0])
-#         sal = np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
-#         utils.time_series_features(times, freqs, sal)
+
+def array_equal(array1, array2):
+    return np.all(np.isclose(array1, array2, atol=1e-7))
+
+
+class TestCesiumFeatures(unittest.TestCase):
+
+    def setUp(self):
+        self.ftr = cesium.CesiumFeatures()
+
+    def test_get_feature_vector(self):
+        times = np.linspace(0, 1, 2000)
+        freqs_hz = 440.0 * np.ones((2000, ))
+        salience = 0.5 * np.ones((2000, ))
+        sample_rate = 2000
+        with self.assertRaises(NotImplementedError):
+            self.ftr.get_feature_vector(
+                times, freqs_hz, salience, sample_rate
+            )
+
+    def test_feature_names(self):
+        expected = range(80)
+        actual = self.ftr.feature_names
+        self.assertEqual(expected, actual)
+
+    def test_get_id(self):
+        expected = 'cesium'
+        actual = self.ftr.get_id()
+        self.assertEqual(expected, actual)

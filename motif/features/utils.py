@@ -156,7 +156,7 @@ def get_total_variation(signal):
     total_variation : float
         The total variation of the signal
     '''
-    return np.sum(np.abs(signal[1:] - signal[:-1]))
+    return np.array([np.sum(np.abs(signal[1:] - signal[:-1]))])
 
 
 def get_polynomial_fit_features(times, signal, n_deg=5, norm=False):

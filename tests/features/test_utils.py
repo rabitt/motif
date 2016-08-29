@@ -83,19 +83,19 @@ class TestTotalVariation(unittest.TestCase):
 
     def test_flat(self):
         signal = np.array([0.0, 0.0, 0.0, 0.0])
-        expected = 0.0
+        expected = np.array([0.0])
         actual = utils.get_total_variation(signal)
         self.assertEqual(expected, actual)
 
     def test_unit_step(self):
         signal = np.array([0.0, 0.0, 1.0, 1.0])
-        expected = 1.0
+        expected = np.array([1.0])
         actual = utils.get_total_variation(signal)
         self.assertEqual(expected, actual)
 
     def test_unit_step_reverse(self):
         signal = np.array([1.0, 1.0, 0.0, 0.0])
-        expected = 1.0
+        expected = np.array([1.0])
         actual = utils.get_total_variation(signal)
         self.assertEqual(expected, actual)
 

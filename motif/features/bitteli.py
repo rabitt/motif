@@ -65,6 +65,7 @@ class BitteliFeatures(ContourFeatures):
             '3rd polynomial coeff - salience',
             '4th polynomial coeff - salience',
             '5th polynomial coeff - salience',
+            'polynomial fit residual - salience',
             'onset',
             'offset',
             'duration',
