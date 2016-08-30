@@ -2,42 +2,41 @@
 """
 import numpy as np
 
-from motif.core import EXTRACTOR_REGISTRY
-from motif.core import FEATURES_REGISTRY
-from motif.core import CLASSIFIER_REGISTRY
-
-import motif.eval.classify as clf_eval
+from .core import CONTOUR_EXTRACTOR_REGISTRY
+from .core import FEATURE_EXTRACTOR_REGISTRY
+from .core import CONTOUR_CLASSIFIER_REGISTRY
 
 
 def process(audio_files=None, training_pairs=None, testing_pairs=None,
             extract_id='salamon', feature_id='bitelli',
             classifier_id='random_forest'):
     contour_extractor = get_extract_module(extract_id)
-    contour_features = get_features_module(feature_id)
+    feature_extractor = get_features_module(feature_id)
     contour_classifier = get_classify_module(classifier_id)
 
     if training_pairs is not None:
         X_train, Y_train, train_contours = process_with_labels(
-            contour_extractor, contour_features, training_pairs
+            contour_extractor, feature_extractor, training_pairs
         )
         contour_classifier.fit(X_train, Y_train)
 
         # get training score
         Y_pred = contour_classifier.predict(X_train)
-        train_scores = clf_eval.score(Y_pred, Y_train)
+        train_scores = contour_classifier.score(Y_pred, Y_train)
 
     if testing_pairs is not None:
         X_test, Y_test, test_contours = process_with_labels(
-            contour_extractor, contour_features, testing_pairs
+            contour_extractor, feature_extractor, testing_pairs
         )
 
         # get testing score
         Y_pred = contour_classifier.predict(X_test)
-        test_scores = clf_eval.score(Y_pred, Y_test)
+        test_scores = contour_classifier.score(Y_pred, Y_test)
 
     if audio_files is not None:
         contour_list = process_audio_only(
-            contour_extractor, contour_features, contour_classifier, audio_files
+            contour_extractor, feature_extractor, contour_classifier,
+            audio_files
         )
 
     return (
@@ -45,19 +44,21 @@ def process(audio_files=None, training_pairs=None, testing_pairs=None,
     )
 
 
-def process_audio_only(contour_extractor, contour_features, contour_classifier,
-                       audio_files):
+def process_audio_only(contour_extractor, feature_extractor,
+                       contour_classifier, audio_files):
 
     contour_list = []
     for audio_filepath in audio_files:
         ctr = contour_extractor.compute_contours(audio_filepath)
-        ctr.compute_features(contour_features)
-        ctr.compute_scores(contour_classifier)
-        contour_list.append(ctr)
+
+        X = feature_extractor.compute_features(ctr)
+        Y = contour_classifier.predict(X)
+
+        contour_list.append((ctr, X, Y))
     return contour_list
 
 
-def process_with_labels(contour_extractor, contour_features, file_pairs):
+def process_with_labels(contour_extractor, feature_extractor, file_pairs):
     contour_list = []
     features_list = []
     labels_list = []
@@ -65,11 +66,11 @@ def process_with_labels(contour_extractor, contour_features, file_pairs):
     for audio_filepath, annotation in file_pairs:
 
         ctr = contour_extractor.compute_contours(audio_filepath)
-        ctr.compute_labels(annotation)
-        ctr.compute_features(contour_features)
-        
-        features_list.append(ctr.stack_features())
-        labels_list.append(ctr.stack_labels())
+        Y_train, _ = ctr.compute_labels(annotation)
+        X_train = feature_extractor.compute_features(ctr)
+
+        features_list.append(X_train)
+        labels_list.append(Y_train)
         contour_list.append(ctr)
 
     X = np.concatenate(features_list)
@@ -95,7 +96,7 @@ def get_extract_module(extract_id):
     if extract_id is None:
         return None
     try:
-        module = EXTRACTOR_REGISTRY[extract_id]
+        module = CONTOUR_EXTRACTOR_REGISTRY[extract_id]
     except AttributeError:
         raise RuntimeError("Algorithm %s can not be found in motif!" %
                            extract_id)
@@ -119,7 +120,7 @@ def get_features_module(feature_id):
     if feature_id is None:
         return None
     try:
-        module = FEATURES_REGISTRY[feature_id]
+        module = FEATURE_EXTRACTOR_REGISTRY[feature_id]
     except AttributeError:
         raise RuntimeError("Algorithm %s can not be found in motif!" %
                            feature_id)
@@ -143,9 +144,8 @@ def get_classify_module(classifier_id):
     if classifier_id is None:
         return None
     try:
-        module = CLASSIFIER_REGISTRY[classifier_id]
+        module = CONTOUR_CLASSIFIER_REGISTRY[classifier_id]
     except AttributeError:
         raise RuntimeError("Algorithm %s can not be found in motif!" %
                            classifier_id)
     return module
-

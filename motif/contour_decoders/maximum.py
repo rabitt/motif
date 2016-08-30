@@ -1,6 +1,17 @@
 # -*- coding: utf-8 -*-
+"""Max decoder.
 """
-"""
+from motif.core import ContourDecoder
+
+class MaxDecoder(ContourDecoder):
+
+    def decode(self, ctr, Y):
+        raise NotImplementedError
+
+    @classmethod
+    def get_id(cls):
+        return 'maximum'
+
 # import numpy as np
 # from sklearn import metrics
 
