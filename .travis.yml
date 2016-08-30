@@ -29,6 +29,7 @@ before_install:
 install:
   - pip install coveralls
   - pip install -e .
+  - pip install mock
 
 # command to run tests
 script: nosetests --with-coverage --cover-erase --cover-package=motif -v -w tests/
