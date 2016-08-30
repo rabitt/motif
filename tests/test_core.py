@@ -4,6 +4,7 @@ import unittest
 import csv
 import os
 import numpy as np
+from mock import patch
 
 from motif import core
 # from motif import features
@@ -151,7 +152,6 @@ class TestContours(unittest.TestCase):
         for f_expected, f_actual in zip(expected_freqs, actual_freqs):
             self.assertTrue(array_equal(f_expected, f_actual))
 
-
     def test_coverage(self):
         actual = self.ctr.coverage(ANNOTATION_FILE)
         expected = {
@@ -194,8 +194,15 @@ class TestContours(unittest.TestCase):
         for k in expected.keys():
             self.assertEqual(expected[k], actual[k])
 
-    def test_plot(self):
-        pass
+    @patch("matplotlib.pyplot.show")
+    def test_plot_contour(self, mock_show):
+        mock_show.return_value = None
+        self.ctr.plot(style='contour')
+
+    @patch("matplotlib.pyplot.show")
+    def test_plot_salience(self, mock_show):
+        mock_show.return_value = None
+        self.ctr.plot(style='salience')
 
     def test_save_contours_subset(self):
         scores = {0: 0.6, 1: 0.2, 2: 0.9}
