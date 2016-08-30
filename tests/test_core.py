@@ -96,6 +96,11 @@ class TestContours(unittest.TestCase):
         actual = self.ctr.duration
         self.assertEqual(expected, actual)
 
+    def test_uniform_times(self):
+        expected = np.arange(0, 3.1, 0.1)
+        actual = self.ctr.uniform_times
+        self.assertTrue(array_equal(expected, actual))
+
     def test_features(self):
         expected = None
         actual = self.ctr._features
@@ -180,6 +185,43 @@ class TestContours(unittest.TestCase):
         expected = np.array([1, 0, 0])
         actual = self.ctr.stack_labels()
         self.assertTrue(array_equal(expected, actual))
+
+    def test_to_multif0_format(self):
+        expected_times = np.arange(0, 3.1, 0.1)
+        expected_freqs = [[] for _ in expected_times]
+        expected_freqs[0].extend([440.0, 50.0])
+        expected_freqs[1].extend([441.0, 52.0])
+        expected_freqs[2].append(55.0)
+        expected_freqs[5].append(325.2)
+        expected_freqs = [np.array(f) for f in expected_freqs]
+        actual_times, actual_freqs = self.ctr.to_multif0_format()
+        self.assertTrue(array_equal(expected_times, actual_times))
+        self.assertEqual(len(expected_freqs), len(actual_freqs))
+
+        for f_expected, f_actual in zip(expected_freqs, actual_freqs):
+            self.assertTrue(array_equal(f_expected, f_actual))
+        
+
+    def test_score_coverage(self):
+        actual = self.ctr.score_coverage(ANNOTATION_FILE)
+        expected = {
+            'Precision': 0.5,
+            'Recall': 0.5,
+            'Accuracy': 0.33333333333333331,
+            'Substitution Error': 0.16666666666666666,
+            'Miss Error': 0.33333333333333331,
+            'False Alarm Error': 0.33333333333333331,
+            'Total Error': 0.83333333333333337,
+            'Chroma Precision': 0.5,
+            'Chroma Recall': 0.5,
+            'Chroma Accuracy': 0.33333333333333331,
+            'Chroma Substitution Error': 0.16666666666666666,
+            'Chroma Miss Error': 0.33333333333333331,
+            'Chroma False Alarm Error': 0.33333333333333331,
+            'Chroma Total Error': 0.83333333333333337
+        }
+        for k in expected.keys():
+            self.assertEqual(expected[k], actual[k])
 
     def test_plot(self):
         pass

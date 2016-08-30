@@ -133,7 +133,7 @@ class Contours(object):
             Array of uniform time stamps at the sample rate
         '''
         n_stamps = int(np.ceil(self.duration * self.sample_rate)) + 1
-        uniform_times = np.arange(n_stamps) / self.sample_rate
+        uniform_times = np.arange(0, n_stamps) / self.sample_rate
         return uniform_times
 
     def contour_times(self, index):
@@ -276,10 +276,12 @@ class Contours(object):
             Each row has the form [time, freq1, freq2, ...]
             Each row may have any number of frequencies.
         '''
-        freqs = [[] for i in len(self.uniform_times)]
+        freqs = [[] for i in range(len(self.uniform_times))]
         time_idx = np.round(self.times * self.sample_rate).astype(int)
         for i, freq in zip(time_idx, self.freqs):
             freqs[i].append(freq)
+        freqs = [np.array(f).astype(float) for f in freqs]
+
         return self.uniform_times, freqs
 
 
@@ -549,12 +551,12 @@ def _load_annotation(annotation_fpath, n_freqs=1, to_array=True):
         reader = csv.reader(fhandle, delimiter=',')
         for row in reader:
             annot_times.append(row[0])
-            annot_freqs.append([float(r) for r in row[1:end_idx]])
+            annot_freqs.append([r for r in row[1:end_idx]])
 
     annot_times = np.array(annot_times, dtype=float)
+    annot_freqs = [np.array(f).astype(float) for f in annot_freqs]
     if to_array:
         annot_freqs = np.array(annot_freqs, dtype=float).flatten()
-
     return annot_times, annot_freqs
 
 
