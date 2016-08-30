@@ -467,3 +467,27 @@ class TestContourClassifier(unittest.TestCase):
             self.clf.get_id()
 
 
+class TestContourDecoderRegistry(unittest.TestCase):
+
+    def test_keys(self):
+        actual = sorted(core.CONTOUR_DECODER_REGISTRY.keys())
+        expected = sorted(['viterbi', 'maximum'])
+        self.assertEqual(expected, actual)
+
+    def test_types(self):
+        for val in core.CONTOUR_DECODER_REGISTRY.values():
+            self.assertTrue(issubclass(val, core.ContourDecoder))
+
+
+class TestContourDecoder(unittest.TestCase):
+
+    def setUp(self):
+        self.dcd = core.ContourDecoder()
+
+    def test_decode(self):
+        with self.assertRaises(NotImplementedError):
+            self.dcd.decode(None, np.array([0]))
+
+    def test_get_id(self):
+        with self.assertRaises(NotImplementedError):
+            self.dcd.get_id()

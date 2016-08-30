@@ -342,7 +342,6 @@ class Contours(object):
         plt.xlabel('Time (sec)')
         plt.ylabel('Frequency (Hz)')
         plt.axis('tight')
-        plt.show()
 
     def save_contours_subset(self, output_fpath, output_nums):
         '''Save extracted contours where score >= threshold to a csv file.
@@ -728,8 +727,8 @@ class MetaContourClassifier(type):
 
 
 class ContourClassifier(six.with_metaclass(MetaContourClassifier)):
-    """This class is an interface for all the contour extraction algorithms
-    included in motif. Each extractor must inherit from it and implement the
+    """This class is an interface for all the contour classifier algorithms
+    included in motif. Each classifer must inherit from it and implement the
     following methods:
         predict(X)
         fit(X, y)
@@ -785,8 +784,10 @@ class ContourClassifier(six.with_metaclass(MetaContourClassifier)):
         scores = {}
         scores['accuracy'] = metrics.accuracy_score(y_target, y_predicted)
         scores['mcc'] = metrics.matthews_corrcoef(y_target, y_predicted)
-        (scores['precision'], scores['recall'], scores['f1'], scores['support']
-        ) = metrics.precision_recall_fscore_support(
+        (scores['precision'],
+         scores['recall'],
+         scores['f1'],
+         scores['support']) = metrics.precision_recall_fscore_support(
             y_target, y_predicted
         )
         scores['confusion matrix'] = metrics.confusion_matrix(
@@ -796,3 +797,49 @@ class ContourClassifier(six.with_metaclass(MetaContourClassifier)):
             y_target, predicted_scores + 1, average='weighted'
         )
         return scores
+
+
+###############################################################################
+CONTOUR_DECODER_REGISTRY = {}  # All available decoders
+
+
+class MetaContourDecoder(type):
+    """Meta-class to register the available decoders."""
+    def __new__(meta, name, bases, class_dict):
+        cls = type.__new__(meta, name, bases, class_dict)
+        # Register classes that inherit from the base class ContourDecoder
+        if "ContourDecoder" in [base.__name__ for base in bases]:
+            CONTOUR_DECODER_REGISTRY[cls.get_id()] = cls
+        return cls
+
+
+class ContourDecoder(six.with_metaclass(MetaContourDecoder)):
+    """This class is an interface for all the contour decoder algorithms
+    included in motif. Each decoder must inherit from it and implement the
+    following methods:
+
+    """
+    def __init__(self):
+        pass
+
+    def decode(self, ctr, Y):
+        """ Decode the output of the contour classifier.
+
+        Parameters
+        ----------
+        ctr : Contours
+            An instance of a Contours object
+        Y : np.array [n_contours]
+            Predicted contour scores.
+
+        Returns
+        -------
+        """
+        raise NotImplementedError("This method must contain the actual "
+                                  "implementation of the decoder.")
+
+    @classmethod
+    def get_id(cls):
+        """Method to get the id of the decoder type"""
+        raise NotImplementedError("This method must return a string identifier"
+                                  " of the contour decoder type")
