@@ -79,8 +79,8 @@ class Contours(object):
 
         self.nums = self._compute_nums()
         self.index_mapping = self._compute_index_mapping()
-
         self.duration = self._compute_duration()
+        self.uniform_times = self._compute_uniform_times()
 
         # computed attributes
         self._features = None
@@ -123,6 +123,18 @@ class Contours(object):
             Audio file duration
         '''
         return sox.file_info.duration(self.audio_filepath)
+
+    def _compute_uniform_times(self):
+        '''Compute array of uniform time stamps at the sample rate
+
+        Returns
+        -------
+        uniform_times : np.array
+            Array of uniform time stamps at the sample rate
+        '''
+        n_stamps = int(np.ceil(self.duration * self.sample_rate)) + 1
+        uniform_times = np.arange(n_stamps) / self.sample_rate
+        return uniform_times
 
     def contour_times(self, index):
         '''Get the time stamps for a particular contour number.
@@ -252,6 +264,56 @@ class Contours(object):
         if self._labels is None:
             raise ReferenceError("Labels have not yet been computed.")
         return np.array([self._labels[n] for n in self.nums])
+
+    def to_multif0_format(self):
+        '''Convert contours to multi-f0 format.
+
+        Returns
+        -------
+        times : np.array
+            uniform time stamps
+        freqs : list of lists
+            Each row has the form [time, freq1, freq2, ...]
+            Each row may have any number of frequencies.
+        '''
+        freqs = [[] for i in len(self.uniform_times)]
+        time_idx = np.round(self.times * self.sample_rate).astype(int)
+        for i, freq in zip(time_idx, self.freqs):
+            freqs[i].append(freq)
+        return self.uniform_times, freqs
+
+
+    def score_coverage(self, annotation_fpath, single_f0=True):
+        """ Load an annotation from a csv file.
+
+        Parameters
+        ----------
+        annotation_fpath : str
+            Path to annotation file.
+        single_f0 : bool
+            True for a file containing a single pitch per time stamp
+            False for a file containing possibly multiple pitches per time stamp
+
+        Returns
+        -------
+        scores : dict
+            Dictionary of mutlipitch scores.
+
+        """
+        est_times, est_freqs = self.to_multif0_format()
+        if single_f0:
+            ref_times, ref_freqs = _load_annotation(
+                annotation_fpath, n_freqs=1, to_array=False
+            )
+        else:
+            ref_times, ref_freqs = _load_annotation(
+                annotation_fpath, n_freqs=None, to_array=False
+            )
+        scores = mir_eval.multipitch.evaluate(
+            ref_times, ref_freqs, est_times, est_freqs
+        )
+        return scores
+
 
     def plot(self, style='contour'):
         '''Plot the contours.
@@ -455,13 +517,18 @@ def _get_snippet_idx(snippet, full_array):
     return idx
 
 
-def _load_annotation(annotation_fpath):
+def _load_annotation(annotation_fpath, n_freqs=1, to_array=True):
     """ Load an annotation from a csv file.
 
     Parameters
     ----------
     annotation_fpath : str
         Path to annotation file.
+    n_freqs : int or None
+        Number of frequencies to read, or None to use max
+    to_array : bool
+        If True, returns annot_freqs as a numpy array
+        If False, returns annot_freqs as a list of lists.
 
     Returns
     -------
@@ -471,6 +538,7 @@ def _load_annotation(annotation_fpath):
         Annotation frequency values
 
     """
+    end_idx = None if n_freqs is None else n_freqs + 1
     if annotation_fpath is not None:
         annot_times = []
         annot_freqs = []
@@ -478,10 +546,11 @@ def _load_annotation(annotation_fpath):
             reader = csv.reader(fhandle, delimiter=',')
             for row in reader:
                 annot_times.append(row[0])
-                annot_freqs.append(row[1])
+                annot_freqs.append(row[1:end_idx])
 
         annot_times = np.array(annot_times, dtype=float)
-        annot_freqs = np.array(annot_freqs, dtype=float)
+        if to_array:
+            annot_freqs = np.array(annot_freqs, dtype=float)
 
     return annot_times, annot_freqs
 
