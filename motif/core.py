@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 """ Core methods and base class definitions
 """
+import csv
+import matplotlib.pyplot as plt
+import mir_eval
 import numpy as np
 import os
-import csv
-import mir_eval
-import matplotlib.pyplot as plt
 import seaborn as sns
 import six
-import sox
-
 from sklearn import metrics
+import sox
+import tempfile as tmp
 
 sns.set()
 
@@ -539,18 +539,20 @@ def _load_annotation(annotation_fpath, n_freqs=1, to_array=True):
 
     """
     end_idx = None if n_freqs is None else n_freqs + 1
-    if annotation_fpath is not None:
-        annot_times = []
-        annot_freqs = []
-        with open(annotation_fpath, 'r') as fhandle:
-            reader = csv.reader(fhandle, delimiter=',')
-            for row in reader:
-                annot_times.append(row[0])
-                annot_freqs.append(row[1:end_idx])
+    if not os.path.exists(annotation_fpath):
+        raise IOError("The annotation path {} does not exist.")
 
-        annot_times = np.array(annot_times, dtype=float)
-        if to_array:
-            annot_freqs = np.array(annot_freqs, dtype=float)
+    annot_times = []
+    annot_freqs = []
+    with open(annotation_fpath, 'r') as fhandle:
+        reader = csv.reader(fhandle, delimiter=',')
+        for row in reader:
+            annot_times.append(row[0])
+            annot_freqs.append([float(r) for r in row[1:end_idx]])
+
+    annot_times = np.array(annot_times, dtype=float)
+    if to_array:
+        annot_freqs = np.array(annot_freqs, dtype=float).flatten()
 
     return annot_times, annot_freqs
 
@@ -606,21 +608,39 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
         raise NotImplementedError("This method must contain the actual "
                                   "implementation of the contour extraction")
 
-    def _preprocess_audio(self, normalize=True, equal_loudness_filter=False,
-                          hpss=False):
+    def _preprocess_audio(self, audio_filepath, normalize_format=True,
+                          normalize_volume=True, hpss=False,
+                          equal_loudness_filter=False):
         '''Preprocess the audio before computing contours
 
         Parameters
         ----------
         normalize : bool
             If True, normalize the audio
-        equal_loudness_fileter : bool
-            If True, applies an equal loudness filter to the audio
         hpss : bool
             If True, applies HPSS & computes contours on the harmonic compoment
+        equal_loudness_filter : bool
+            If True, applies an equal loudness filter to the audio
 
         '''
-        raise NotImplementedError
+        tfm = sox.Transformer()
+        if normalize_format:
+            tfm.convert(samplerate=44100, n_channels=1, bitdepth=32)
+
+        if normalize_volume:
+            tfm.norm(db_level=-3.0)
+
+        output_path = tmp.mktemp('.wav')
+        tfm.build(audio_filepath, output_path)
+
+        if hpss:
+            raise NotImplementedError
+
+        if equal_loudness_filter:
+            raise NotImplementedError
+
+        return output_path
+
 
     def _postprocess_contours(self):
         """Remove contours that are too short.

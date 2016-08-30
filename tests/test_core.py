@@ -309,6 +309,20 @@ class TestLoadAnnotation(unittest.TestCase):
         self.assertTrue(array_equal(expected_times, actual_times))
         self.assertTrue(array_equal(expected_freqs, actual_freqs))
 
+    def test_load_annotation_list(self):
+        expected_times = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
+        expected_freqs = [[440.0], [441.0], [55.0], [56.0], [57.0], [200.0]]
+
+        actual_times, actual_freqs = core._load_annotation(
+            ANNOTATION_FILE, to_array=False
+        )
+        self.assertTrue(array_equal(expected_times, actual_times))
+        self.assertEqual(expected_freqs, actual_freqs)
+
+    def test_file_not_exists(self):
+        with self.assertRaises(IOError):
+            core._load_annotation('does/not/exist.csv')
+
 
 class TestExtractorRegistry(unittest.TestCase):
 
@@ -344,8 +358,22 @@ class TestContourExtractor(unittest.TestCase):
             self.cex.compute_contours(AUDIO_FILE)
 
     def test_preprocess_audio(self):
+        tmp_audio = self.cex._preprocess_audio(AUDIO_FILE)
+        self.assertTrue(os.path.exists(tmp_audio))
+
+    def test_preprocess_audio_passthrough(self):
+        tmp_audio = self.cex._preprocess_audio(
+            AUDIO_FILE, normalize_format=False, normalize_volume=False
+        )
+        self.assertTrue(os.path.exists(tmp_audio))
+
+    def test_preprocess_audio_hpss(self):
         with self.assertRaises(NotImplementedError):
-            self.cex._preprocess_audio()
+            self.cex._preprocess_audio(AUDIO_FILE, hpss=True)
+
+    def test_preprocess_audio_equal_loudness_filter(self):
+        with self.assertRaises(NotImplementedError):
+            self.cex._preprocess_audio(AUDIO_FILE, equal_loudness_filter=True)
 
     def test_post_process_contours(self):
         with self.assertRaises(NotImplementedError):
