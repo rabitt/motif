@@ -6,8 +6,8 @@ import numpy as np
 
 from motif.features import utils
 
-import warnings
-warnings.simplefilter("error")
+# import warnings
+# warnings.simplefilter("error")
 
 
 def array_equal(array1, array2):

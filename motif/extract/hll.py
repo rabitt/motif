@@ -1,27 +1,29 @@
 # -*- coding: utf-8 -*-
 """HLL method for extracting contours.
 """
-import numpy as np
 import csv
+import librosa
+import numpy as np
 import os
-import tempfile as tmp
+from scipy import signal
 import subprocess
 from subprocess import CalledProcessError
+import tempfile as tmp
 
 from motif.core import ContourExtractor
 from motif.core import Contours
 
 
 def _check_binary():
-    '''Check if the vamp plugin is available and can be called.
+    '''Check if the binary is available.
 
     Returns
     -------
-    True if callable, False otherwise
+    True if available, False otherwise
     '''
     hll_exists = True
     try:
-        subprocess.check_output(['which', 'run-hll'])
+        subprocess.check_output(['which', 'hll'])
     except CalledProcessError:
         hll_exists = False
 
@@ -32,6 +34,32 @@ BINARY_AVAILABLE = _check_binary()
 
 
 class HLL(ContourExtractor):
+
+    def __init__(self):
+        # seed detection parameters
+        self.hop_length = 8192
+        self.n_cqt_bins = 12*6
+        self.bins_per_octave = 12
+        self.min_note = 'E1'
+        self.med_filt_len = 5
+        self.peak_thresh = 0.4
+        ## librosa peak pick params for seed detection
+        self.pre_max = 3
+        self.post_max = 3
+        self.pre_avg = 5
+        self.post_avg = 7
+        self.delta = 0.02
+        self.wait = 10
+
+        # HLL paramters
+        self.n_harmonics = 5
+        self.f_cutoff = 30  # Hz
+        self.tracking_gain = 0.0005
+        self.min_contour_len = 11025
+        self.amplitude_threshold = 0.001
+        self.tracking_update_threshold = 70.0
+
+        ContourExtractor.__init__(self)
 
     @property
     def sample_rate(self):
@@ -58,12 +86,13 @@ class HLL(ContourExtractor):
         Returns
         -------
         Instance of Contours object
-        """
 
+        """
         if not BINARY_AVAILABLE:
             raise EnvironmentError(
-                "Either the binary {} needed to compute these contours is "
-                "not available."
+                "The binary {} needed to compute these contours is "
+                "not available. To fix this, copy the hll binary from "
+                "``motif/extract/resources/`` into ``/usr/local/bin``."
             )
 
         if not os.path.exists(audio_filepath):
@@ -71,73 +100,137 @@ class HLL(ContourExtractor):
                 "The audio file {} does not exist".format(audio_filepath)
             )
 
-        if self.recompute:
-            output_file_object = tmp.NamedTemporaryFile('csv')
-            output_path = output_file_object.name
-        else:
-            input_name = os.path.basename(audio_filepath)
-            input_dir = os.path.dirname(audio_filepath)
-            output_name = "{}_HLL_contours.csv".format(input_name.split('.'))
-            output_path = os.path.join(input_dir, output_name)
+        tmp_audio = self._preprocess_audio(
+            audio_filepath, normalize_format=True, normalize_volume=True
+        )
 
-        if not os.path.exists(output_path):
-            args = [
-                "run-hll",
-                "{}".format(audio_filepath), "{}".format(output_path.name)
-            ]
-            os.system(' '.join(args))
+        seed_fpath = self.get_seeds(tmp_audio)
+        contours_fpath = tmp.mktemp('.csv')
 
-        if not os.path.exists(output_path):
+        args = [
+            "hll",
+            "{}".format(tmp_audio),
+            "{}".format(seed_fpath),
+            "{}".format(contours_fpath),
+            "{}".format(self.n_harmonics),
+            "{}".format(self.f_cutoff),
+            "{}".format(self.tracking_gain),
+            "{}".format(self.min_contour_len),
+            "{}".format(self.amplitude_threshold),
+            "{}".format(self.tracking_update_threshold)
+        ]
+        os.system(' '.join(args))
+
+        if not os.path.exists(contours_fpath):
             raise IOError(
-                "Unable to find HLL output file {}".format(output_path)
+                "Unable to find HLL output file {}".format(contours_fpath)
             )
 
-        c_numbers, c_times, c_freqs, c_sal = _load_contours(output_path)
+        c_numbers, c_times, c_freqs, c_sal = self._load_contours(contours_fpath)
 
-        if self.clean:
-            os.remove(output_path)
+        os.remove(contours_fpath)
+        os.remove(tmp_audio)
+        os.remove(seed_fpath)
 
         return Contours(
             c_numbers, c_times, c_freqs, c_sal, self.sample_rate, audio_filepath
         )
 
+    def get_seeds(self, audio_filepath):
+        y, sr = librosa.load(audio_filepath, sr=None)
+        cqt, samples, freqs = self._compute_cqt(y, sr)
+        seeds = self._pick_seeds_cqt(cqt, freqs, samples)
 
-def _load_contours(fpath):
-    """ Load contour data from an HLL csv file.
+        seeds_fpath = tmp.mktemp('.csv')
+        with open(seeds_fpath, 'w') as fhandle:
+            writer = csv.writer(fhandle, delimiter=',')
+            writer.writerows(seeds)
+        return seeds_fpath
 
-    Parameters
-    ----------
-    fpath : str
-        Path to output csv file.
+    def _compute_cqt(self, y, sr):
+        fmin = librosa.note_to_hz(self.min_note)
+        cqt = np.abs(librosa.cqt(
+            y, sr=sr, hop_length=self.hop_length, fmin=fmin, filter_scale=4,
+            bins_per_octave=self.bins_per_octave, n_bins=self.n_cqt_bins,
+            real=False
+        ))
+        n_time_frames = cqt.shape[1]
+        freqs = librosa.cqt_frequencies(
+            fmin=fmin, bins_per_octave=self.bins_per_octave,
+            n_bins=self.n_cqt_bins
+        )
+        samples = librosa.frames_to_samples(
+            range(n_time_frames), hop_length=self.hop_length
+        )
 
-    Returns
-    -------
-    index : np.array
-        Array of contour numbers
-    times : np.array
-        Array of contour times
-    freqs : np.array
-        Array of contour frequencies
-    contour_sal : np.array
-        Array of contour saliences
+        # compute log amplitude
+        cqt_log = librosa.logamplitude(cqt**2, ref_power=np.max)
+        cqt_log = cqt_log - np.min(np.min(cqt_log))
+        cqt_log = cqt_log/(np.max(np.max(cqt_log)))
 
-    """
-    index = []
-    times = []
-    freqs = []
-    contour_sal = []
-    with open(fpath, 'r') as fhandle:
-        reader = csv.reader(fhandle, delimiter=',')
-        for row in reader:
-            index.append(row[0])
-            times.append(row[1])
-            freqs.append(row[2])
-            contour_sal.append(row[3:])
+        return cqt_log, samples, freqs
 
-    # Add column with annotation values in cents
-    index = np.array(index, dtype=int)
-    times = np.array(times, dtype=float)
-    freqs = np.array(freqs, dtype=float)
-    contour_sal = np.array(contour_sal, dtype=float)
+    def _pick_seeds_cqt(self, cqt, cqt_freqs, samples):
+        seeds = []
+        for i, freq in enumerate(cqt_freqs):
+            freq_band = cqt[i, :]
+            freq_band = freq_band/np.max(freq_band)
+            freq_band_smooth = signal.medfilt(freq_band, self.med_filt_len)
+            peak_locs = librosa.util.peak_pick(
+                freq_band_smooth, self.pre_max, self.post_max, self.pre_avg,
+                self.post_avg, self.delta, self.wait
+            )
+            if len(peak_locs) > 0:
+                peak_locs = peak_locs[
+                    (freq_band_smooth[peak_locs] > self.peak_thresh)
+                ]
+                for peak_loc in peak_locs:
+                    sample = samples[peak_loc]
+                    seeds.append([sample, freq])
+        seeds = np.array(seeds)
+        return seeds
 
-    return index, times, freqs, contour_sal
+    def _load_contours(self, fpath):
+        """ Load contour data from an HLL csv file.
+
+        Parameters
+        ----------
+        fpath : str
+            Path to output csv file.
+
+        Returns
+        -------
+        index : np.array
+            Array of contour numbers
+        times : np.array
+            Array of contour times
+        freqs : np.array
+            Array of contour frequencies
+        contour_sal : np.array
+            Array of contour saliences
+
+        """
+        index = []
+        times = []
+        freqs = []
+        contour_sal = []
+        with open(fpath, 'r') as fhandle:
+            reader = csv.reader(fhandle, delimiter=',')
+            for row in reader:
+                index.append(row[0])
+                times.append(row[1])
+                freqs.append(row[2])
+                contour_sal.append(row[3:])
+
+        # Add column with annotation values in cents
+        index = np.array(index, dtype=int)
+        times = np.array(times, dtype=float) / self.sample_rate
+        freqs = np.array(freqs, dtype=float)
+        contour_sal = np.array(contour_sal, dtype=float)
+
+        sort_idx = np.lexsort((times, index))
+
+        return (
+            index[sort_idx], times[sort_idx], freqs[sort_idx],
+            contour_sal[sort_idx]
+        )

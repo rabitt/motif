@@ -342,8 +342,10 @@ class TestContourExtractor(unittest.TestCase):
         self.cex = core.ContourExtractor()
 
     def test_inits(self):
-        self.assertTrue(self.cex.recompute)
-        self.assertTrue(self.cex.clean)
+        self.assertEqual(self.cex.audio_samplerate, 44100)
+        self.assertEqual(self.cex.audio_channels, 1)
+        self.assertEqual(self.cex.audio_bitdepth, 32)
+        self.assertEqual(self.cex.audio_db_level, -3.0)
 
     def test_sample_rate(self):
         with self.assertRaises(NotImplementedError):

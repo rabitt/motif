@@ -89,12 +89,12 @@ class Salamon(ContourExtractor):
         )
         output_dir = os.path.dirname(tmp_audio)
         output_path = os.path.join(output_dir, output_file_name)
-        if self.recompute or not os.path.exists(output_path):
-            args = [
-                "sonic-annotator", "-d", VAMP_PLUGIN,
-                "{}".format(tmp_audio), "-w", "csv", "--csv-force"
-            ]
-            os.system(' '.join(args))
+
+        args = [
+            "sonic-annotator", "-d", VAMP_PLUGIN,
+            "{}".format(tmp_audio), "-w", "csv", "--csv-force"
+        ]
+        os.system(' '.join(args))
 
         if not os.path.exists(output_path):
             raise IOError(
@@ -103,9 +103,8 @@ class Salamon(ContourExtractor):
 
         c_numbers, c_times, c_freqs, c_sal = _load_contours(output_path)
 
-        if self.clean:
-            os.remove(output_path)
-            os.remove(tmp_audio)
+        os.remove(output_path)
+        os.remove(tmp_audio)
 
         return Contours(
             c_numbers, c_times, c_freqs, c_sal, self.sample_rate, audio_filepath
