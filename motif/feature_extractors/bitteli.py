@@ -16,6 +16,15 @@ class BitteliFeatures(ContourFeatures):
         ContourFeatures.__init__(self)
 
     def get_feature_vector(self, times, freqs_hz, salience, sample_rate):
+        """
+        Parameters
+        ----------
+
+
+        Returns
+        -------
+
+        """
         freqs_cents = utils.hz_to_cents(freqs_hz, ref_hz=self.ref_hz)
 
         features = [
