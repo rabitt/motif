@@ -35,7 +35,7 @@ if __name__ == "__main__":
             'matplotlib',
             'seaborn',
             'librosa',
-            'mir_eval',
+            'mir_eval >= 0.4.0',
             'sox'
         ],
 

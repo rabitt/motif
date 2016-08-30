@@ -33,8 +33,8 @@ class TestContours(unittest.TestCase):
         self.sample_rate = 10.0
         self.audio_fpath = AUDIO_FILE
         self.ctr = core.Contours(
-            self.index, self.times, self.freqs, self.salience, self.sample_rate,
-            self.audio_fpath
+            self.index, self.times, self.freqs, self.salience,
+            self.sample_rate, self.audio_fpath
         )
 
     def test_invalid_contours(self):
@@ -101,26 +101,6 @@ class TestContours(unittest.TestCase):
         actual = self.ctr.uniform_times
         self.assertTrue(array_equal(expected, actual))
 
-    def test_features(self):
-        expected = None
-        actual = self.ctr._features
-        self.assertEqual(expected, actual)
-
-    def test_labels(self):
-        expected = None
-        actual = self.ctr._labels
-        self.assertEqual(expected, actual)
-
-    def test_overlaps(self):
-        expected = None
-        actual = self.ctr._overlaps
-        self.assertEqual(expected, actual)
-
-    def test_scores(self):
-        expected = None
-        actual = self.ctr._scores
-        self.assertEqual(expected, actual)
-
     def test_contour_times(self):
         expected = np.array([0.0, 0.1, 0.2])
         actual = self.ctr.contour_times(1)
@@ -137,54 +117,24 @@ class TestContours(unittest.TestCase):
         self.assertTrue(array_equal(expected, actual))
 
     def test_compute_labels_default(self):
-        self.ctr.compute_labels(ANNOTATION_FILE)
-        expected_overlaps = {0: 1.0, 1: 1.0/3.0, 2: 0.0}
-        expected_labels = {0: 1, 1: 0, 2: 0}
-        actual_overlaps = self.ctr._overlaps
-        actual_labels = self.ctr._labels
-        self.assertEqual(expected_overlaps, actual_overlaps)
-        self.assertEqual(expected_labels, actual_labels)
 
-    def test_compute_labels_default(self):
-        self.ctr.compute_labels(
+        expected_overlaps = np.array([1.0, 1.0 / 3.0, 0.0])
+        expected_labels = np.array([1, 0, 0])
+        actual_labels, actual_overlaps = self.ctr.compute_labels(
+            ANNOTATION_FILE
+        )
+        self.assertTrue(array_equal(expected_overlaps, actual_overlaps))
+        self.assertTrue(array_equal(expected_labels, actual_labels))
+
+    def test_compute_labels_overlap(self):
+
+        expected_overlaps = np.array([1.0, 1.0 / 3.0, 0.0])
+        expected_labels = np.array([1, 1, 0])
+        actual_labels, actual_overlaps = self.ctr.compute_labels(
             ANNOTATION_FILE, overlap_threshold=0.2
         )
-        expected_overlaps = {0: 1.0, 1: 1.0/3.0, 2: 0.0}
-        expected_labels = {0: 1, 1: 1, 2: 0}
-        actual_overlaps = self.ctr._overlaps
-        actual_labels = self.ctr._labels
-        self.assertEqual(expected_overlaps, actual_overlaps)
-        self.assertEqual(expected_labels, actual_labels)
-
-    def test_compute_features(self):
-        pass
-
-    def test_compute_scores(self):
-        pass
-        # clf = MvGaussian()
-        # X = np.array([[1.0, 2.0], [0.0, 0.0], [0.5, 0.7]])
-        # Y = np.array([1, 1, 0])
-        # clf.fit(X, Y)
-
-    def test_stack_features_none(self):
-        with self.assertRaises(ReferenceError):
-            self.ctr.stack_features()
-
-    def test_stack_features(self):
-        self.ctr._features = {0: [1, 1, 1], 2: [0, 0, 0], 1: [1, 1, 1]}
-        expected = np.array([[1, 1, 1], [1, 1, 1], [0, 0, 0]])
-        actual = self.ctr.stack_features()
-        self.assertTrue(array_equal(expected, actual))
-
-    def test_stack_labels_none(self):
-        with self.assertRaises(ReferenceError):
-            self.ctr.stack_labels()
-
-    def test_stack_labels(self):
-        self.ctr._labels = {0: 1, 2: 0, 1: 0}
-        expected = np.array([1, 0, 0])
-        actual = self.ctr.stack_labels()
-        self.assertTrue(array_equal(expected, actual))
+        self.assertTrue(array_equal(expected_overlaps, actual_overlaps))
+        self.assertTrue(array_equal(expected_labels, actual_labels))
 
     def test_to_multif0_format(self):
         expected_times = np.arange(0, 3.1, 0.1)
@@ -200,10 +150,10 @@ class TestContours(unittest.TestCase):
 
         for f_expected, f_actual in zip(expected_freqs, actual_freqs):
             self.assertTrue(array_equal(f_expected, f_actual))
-        
 
-    def test_score_coverage(self):
-        actual = self.ctr.score_coverage(ANNOTATION_FILE)
+
+    def test_coverage(self):
+        actual = self.ctr.coverage(ANNOTATION_FILE)
         expected = {
             'Precision': 0.5,
             'Recall': 0.5,
@@ -223,8 +173,8 @@ class TestContours(unittest.TestCase):
         for k in expected.keys():
             self.assertEqual(expected[k], actual[k])
 
-    def test_score_coverage_multif0(self):
-        actual = self.ctr.score_coverage(ANNOTATION_FILE, single_f0=False)
+    def test_coverage_multif0(self):
+        actual = self.ctr.coverage(ANNOTATION_FILE, single_f0=False)
         expected = {
             'Precision': 0.5,
             'Recall': 0.5,
@@ -247,14 +197,11 @@ class TestContours(unittest.TestCase):
     def test_plot(self):
         pass
 
-    def test_save_target_contours_none(self):
-        with self.assertRaises(ReferenceError):
-            self.ctr.save_target_contours(CONTOURS_FILE)
-
-    def test_save_target_contours(self):
-        self.ctr._scores = {0: 0.6, 1: 0.2, 2: 0.9}
+    def test_save_contours_subset(self):
+        scores = {0: 0.6, 1: 0.2, 2: 0.9}
         fpath = CONTOURS_FILE
-        self.ctr.save_target_contours(fpath)
+        nums_target = [n for n in self.ctr.nums if scores[n] >= 0.5]
+        self.ctr.save_contours_subset(fpath, nums_target)
         expected = [
             [0, 0.0, 440.0, 0.4],
             [0, 0.1, 441.0, 0.8],
@@ -390,12 +337,12 @@ class TestLoadAnnotation(unittest.TestCase):
 class TestExtractorRegistry(unittest.TestCase):
 
     def test_keys(self):
-        actual = sorted(core.EXTRACTOR_REGISTRY.keys())
+        actual = sorted(core.CONTOUR_EXTRACTOR_REGISTRY.keys())
         expected = sorted(['hll', 'salamon'])
         self.assertEqual(expected, actual)
 
     def test_types(self):
-        for val in core.EXTRACTOR_REGISTRY.values():
+        for val in core.CONTOUR_EXTRACTOR_REGISTRY.values():
             self.assertTrue(issubclass(val, core.ContourExtractor))
 
 
@@ -448,19 +395,19 @@ class TestContourExtractor(unittest.TestCase):
 class TestFeaturesRegistry(unittest.TestCase):
 
     def test_keys(self):
-        actual = sorted(core.FEATURES_REGISTRY.keys())
+        actual = sorted(core.FEATURE_EXTRACTOR_REGISTRY.keys())
         expected = sorted(['cesium', 'melodia', 'bitteli'])
         self.assertEqual(expected, actual)
 
     def test_types(self):
-        for val in core.FEATURES_REGISTRY.values():
-            self.assertTrue(issubclass(val, core.ContourFeatures))
+        for val in core.FEATURE_EXTRACTOR_REGISTRY.values():
+            self.assertTrue(issubclass(val, core.FeatureExtractor))
 
 
-class TestContourFeatures(unittest.TestCase):
+class TestFeatureExtractor(unittest.TestCase):
 
     def setUp(self):
-        self.ftr = core.ContourFeatures()
+        self.ftr = core.FeatureExtractor()
 
     def test_get_feature_vector(self):
         times = np.array([0])
@@ -482,22 +429,22 @@ class TestContourFeatures(unittest.TestCase):
         pass
 
 
-class TestClassifierRegistry(unittest.TestCase):
+class TestContourClassifierRegistry(unittest.TestCase):
 
     def test_keys(self):
-        actual = sorted(core.CLASSIFIER_REGISTRY.keys())
+        actual = sorted(core.CONTOUR_CLASSIFIER_REGISTRY.keys())
         expected = sorted(['mv_gaussian', 'random_forest'])
         self.assertEqual(expected, actual)
 
     def test_types(self):
-        for val in core.CLASSIFIER_REGISTRY.values():
-            self.assertTrue(issubclass(val, core.Classifier))
+        for val in core.CONTOUR_CLASSIFIER_REGISTRY.values():
+            self.assertTrue(issubclass(val, core.ContourClassifier))
 
 
-class TestClassifier(unittest.TestCase):
+class TestContourClassifier(unittest.TestCase):
 
     def setUp(self):
-        self.clf = core.Classifier()
+        self.clf = core.ContourClassifier()
 
     def test_threshold(self):
         with self.assertRaises(NotImplementedError):

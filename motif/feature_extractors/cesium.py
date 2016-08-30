@@ -1,10 +1,11 @@
 """Features from cesium module.
 """
 # from cesium import science_feature_tools
-from motif.core import ContourFeatures
+from motif.core import FeatureExtractor
 import numpy as np
 
-class CesiumFeatures(ContourFeatures):
+
+class CesiumFeatures(FeatureExtractor):
 
     def get_feature_vector(self, times, freqs_hz, salience, sample_rate):
         raise NotImplementedError

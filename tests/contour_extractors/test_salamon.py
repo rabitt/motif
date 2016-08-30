@@ -4,7 +4,7 @@ import unittest
 import os
 import numpy as np
 
-from motif.extract import salamon
+from motif.contour_extractors import salamon
 from motif.core import Contours
 
 

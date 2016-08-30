@@ -1,14 +1,14 @@
 """Features as in Melodia.
 """
-from motif.core import ContourFeatures
-from motif.features import utils
+from motif.core import FeatureExtractor
+from motif.feature_extractors import utils
 import numpy as np
 
-class MelodiaFeatures(ContourFeatures):
+class MelodiaFeatures(FeatureExtractor):
 
     def __init__(self):
         self.ref_hz = 55.0
-        ContourFeatures.__init__(self)
+        FeatureExtractor.__init__(self)
 
     def get_feature_vector(self, times, freqs_hz, salience, sample_rate):
         freqs_cents = utils.hz_to_cents(freqs_hz, ref_hz=self.ref_hz)

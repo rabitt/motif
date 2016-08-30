@@ -315,7 +315,6 @@ class Contours(object):
         )
         return scores
 
-
     def plot(self, style='contour'):
         '''Plot the contours.
 
@@ -345,22 +344,22 @@ class Contours(object):
         plt.axis('tight')
         plt.show()
 
-    def save_target_contours(self, output_fpath, threshold=0.5):
+    def save_contours_subset(self, output_fpath, output_nums):
         '''Save extracted contours where score >= threshold to a csv file.
 
         Parameters
         ----------
         output_fpath : str
             Path to save output csv file.
+        output_nums : list
+            List of contour numbers to save
         threshold : float
             Minimum score to be considered part of the target class.
 
         '''
-        if self._scores is None:
-            raise ReferenceError("No scores to save")
-        nums_target = [n for n in self.nums if self._scores[n] >= threshold]
+        # nums_target = [n for n in self.nums if self._scores[n] >= threshold]
         target_indices = []
-        for num in nums_target:
+        for num in output_nums:
             target_indices.extend(self.index_mapping[num])
 
         with open(output_fpath, 'w') as fhandle:
@@ -782,7 +781,7 @@ class ContourClassifier(six.with_metaclass(MetaContourClassifier)):
             accuracy, matthews correlation coefficient, precision, recall, f1,
             support, confusion matrix, auc score
         """
-        y_predicted = 1*(predicted_scores >= self.threshold)
+        y_predicted = 1 * (predicted_scores >= self.threshold)
         scores = {}
         scores['accuracy'] = metrics.accuracy_score(y_target, y_predicted)
         scores['mcc'] = metrics.matthews_corrcoef(y_target, y_predicted)

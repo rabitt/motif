@@ -4,7 +4,7 @@ from __future__ import print_function
 import unittest
 import numpy as np
 
-from motif.features import utils
+from motif.feature_extractors import utils
 
 # import warnings
 # warnings.simplefilter("error")

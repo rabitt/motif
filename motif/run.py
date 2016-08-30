@@ -2,9 +2,9 @@
 """
 import numpy as np
 
-from motif.core import CONTOUR_EXTRACTOR_REGISTRY
-from motif.core import FEATURE_EXTRACTOR_REGISTRY
-from motif.core import CONTOUR_CLASSIFIER_REGISTRY
+from .core import CONTOUR_EXTRACTOR_REGISTRY
+from .core import FEATURE_EXTRACTOR_REGISTRY
+from .core import CONTOUR_CLASSIFIER_REGISTRY
 
 
 def process(audio_files=None, training_pairs=None, testing_pairs=None,

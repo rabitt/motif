@@ -3,7 +3,7 @@
 import unittest
 import numpy as np
 
-from motif.features import cesium
+from motif.feature_extractors import cesium
 
 
 def array_equal(array1, array2):

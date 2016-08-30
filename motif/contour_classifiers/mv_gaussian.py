@@ -5,15 +5,15 @@ import numpy as np
 from scipy.stats import boxcox
 from scipy.stats import multivariate_normal
 
-from motif.core import Classifier
+from motif.core import ContourClassifier
 
 EPS = 1.0
 
 
-class MvGaussian(Classifier):
+class MvGaussian(ContourClassifier):
 
     def __init__(self):
-        Classifier.__init__(self)
+        ContourClassifier.__init__(self)
 
         self.rv_pos = None
         self.rv_neg = None

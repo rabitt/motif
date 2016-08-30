@@ -3,7 +3,7 @@
 import unittest
 import numpy as np
 
-from motif.features import melodia
+from motif.feature_extractors import melodia
 
 
 def array_equal(array1, array2):

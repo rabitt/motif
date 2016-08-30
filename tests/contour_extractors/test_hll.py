@@ -4,7 +4,7 @@ import unittest
 import os
 import numpy as np
 
-from motif.extract import hll
+from motif.contour_extractors import hll
 from motif.core import Contours
 
 
@@ -54,7 +54,7 @@ class TestHLL(unittest.TestCase):
 
     def test_get_seeds(self):
         output_path = self.etr.get_seeds(AUDIO_FILE)
-        self.assertTrue(os.path.exists(output_path))      
+        self.assertTrue(os.path.exists(output_path))
 
     def test_load(self):
         (actual_idx, actual_times,

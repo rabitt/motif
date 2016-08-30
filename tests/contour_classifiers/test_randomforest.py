@@ -4,7 +4,7 @@ from __future__ import print_function
 import unittest
 import numpy as np
 
-from motif.classify import random_forest
+from motif.contour_classifiers import random_forest
 
 def array_equal(array1, array2):
     return np.all(np.isclose(array1, array2))

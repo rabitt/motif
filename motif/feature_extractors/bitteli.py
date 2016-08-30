@@ -1,10 +1,10 @@
 """Features as in Melodia.
 """
-from motif.core import ContourFeatures
-from motif.features import utils
+from motif.core import FeatureExtractor
+from motif.feature_extractors import utils
 import numpy as np
 
-class BitteliFeatures(ContourFeatures):
+class BitteliFeatures(FeatureExtractor):
 
     def __init__(self):
         self.ref_hz = 55.0
@@ -13,7 +13,7 @@ class BitteliFeatures(ContourFeatures):
         self.max_freq = 30
         self.freq_step = 0.1
         self.vibrato_threshold = 0.25
-        ContourFeatures.__init__(self)
+        FeatureExtractor.__init__(self)
 
     def get_feature_vector(self, times, freqs_hz, salience, sample_rate):
         """

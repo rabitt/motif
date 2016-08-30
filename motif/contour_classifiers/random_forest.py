@@ -7,10 +7,10 @@ from sklearn import cross_validation
 from sklearn.utils import shuffle
 import numpy as np
 
-from motif.core import Classifier
+from motif.core import ContourClassifier
 
 
-class RandomForest(Classifier):
+class RandomForest(ContourClassifier):
 
     def __init__(self, n_estimators=100, n_jobs=-1, class_weight='auto',
                  max_features=None, max_param=100, param_step=5):
@@ -31,7 +31,7 @@ class RandomForest(Classifier):
             Step size in parameter sweep
 
         '''
-        Classifier.__init__(self)
+        ContourClassifier.__init__(self)
 
         self.n_estimators = n_estimators
         self.n_jobs = n_jobs
