@@ -432,9 +432,6 @@ class TestFeatureExtractor(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             self.ftr.get_id()
 
-    def test_compute_all_feautres(self):
-        pass
-
 
 class TestContourClassifierRegistry(unittest.TestCase):
 

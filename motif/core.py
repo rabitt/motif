@@ -563,8 +563,8 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
     Additionally, two private helper functions are provided:
         - preprocess
         - postprocess
-    These are meant to do common tasks for all the extractors and they should be
-    called inside the process method if needed.
+    These are meant to do common tasks for all the extractors and they should
+    be called inside the process method if needed.
 
     Some methods may call a binary in the background, which creates a csv file.
     The csv file is loaded into memory and the file is deleted, unless
