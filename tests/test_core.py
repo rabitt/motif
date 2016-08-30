@@ -223,6 +223,27 @@ class TestContours(unittest.TestCase):
         for k in expected.keys():
             self.assertEqual(expected[k], actual[k])
 
+    def test_score_coverage_multif0(self):
+        actual = self.ctr.score_coverage(ANNOTATION_FILE, single_f0=False)
+        expected = {
+            'Precision': 0.5,
+            'Recall': 0.5,
+            'Accuracy': 0.33333333333333331,
+            'Substitution Error': 0.16666666666666666,
+            'Miss Error': 0.33333333333333331,
+            'False Alarm Error': 0.33333333333333331,
+            'Total Error': 0.83333333333333337,
+            'Chroma Precision': 0.5,
+            'Chroma Recall': 0.5,
+            'Chroma Accuracy': 0.33333333333333331,
+            'Chroma Substitution Error': 0.16666666666666666,
+            'Chroma Miss Error': 0.33333333333333331,
+            'Chroma False Alarm Error': 0.33333333333333331,
+            'Chroma Total Error': 0.83333333333333337
+        }
+        for k in expected.keys():
+            self.assertEqual(expected[k], actual[k])
+
     def test_plot(self):
         pass
 

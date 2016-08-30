@@ -52,14 +52,14 @@ class TestHLL(unittest.TestCase):
         with self.assertRaises(EnvironmentError):
             self.etr.compute_contours('does/not/exist')
 
-
-class TestLoadContours(unittest.TestCase):
+    def test_get_seeds(self):
+        output_path = self.etr.get_seeds(AUDIO_FILE)
+        self.assertTrue(os.path.exists(output_path))      
 
     def test_load(self):
-        pass
-        # (actual_idx, actual_times,
-        #  actual_freqs, actual_sal) = hll._load_contours(CONTOURS)
-        # idx_length = len(actual_idx)
-        # self.assertEqual(idx_length, len(actual_times))
-        # self.assertEqual(idx_length, len(actual_freqs))
-        # self.assertEqual(idx_length, len(actual_sal))
+        (actual_idx, actual_times,
+         actual_freqs, actual_sal) = self.etr._load_contours(CONTOURS)
+        idx_length = len(actual_idx)
+        self.assertEqual(idx_length, len(actual_times))
+        self.assertEqual(idx_length, len(actual_freqs))
+        self.assertEqual(idx_length, len(actual_sal))
