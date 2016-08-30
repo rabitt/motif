@@ -41,6 +41,7 @@ if __name__ == "__main__":
 
         extras_require={
             'tests': [
+                'mock',
                 'pytest',
                 'pytest-cov',
                 'pytest-pep8',
