@@ -361,6 +361,7 @@ class Contours(object):
         plt.xlabel('Time (sec)')
         plt.ylabel('Frequency (Hz)')
         plt.axis('tight')
+        plt.show()
 
     def save_target_contours(self, output_fpath, threshold=0.5):
         '''Save extracted contours where score >= threshold to a csv file.
@@ -588,8 +589,10 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
     precomputed contour file and if successful will load it directly.
     """
     def __init__(self):
-        self.recompute = True
-        self.clean = True
+        self.audio_samplerate = 44100
+        self.audio_channels = 1
+        self.audio_bitdepth = 32
+        self.audio_db_level = -3.0
 
     @property
     def sample_rate(self):
@@ -625,10 +628,14 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
         '''
         tfm = sox.Transformer()
         if normalize_format:
-            tfm.convert(samplerate=44100, n_channels=1, bitdepth=32)
+            tfm.convert(
+                samplerate=self.audio_samplerate,
+                n_channels=self.audio_channels,
+                bitdepth=self.audio_bitdepth
+            )
 
         if normalize_volume:
-            tfm.norm(db_level=-3.0)
+            tfm.norm(db_level=self.audio_db_level)
 
         output_path = tmp.mktemp('.wav')
         tfm.build(audio_filepath, output_path)
