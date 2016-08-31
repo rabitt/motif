@@ -20,7 +20,7 @@ addons:
     - sox
 
 before_install:
-    - cp motif/contour_extractors/resources/hll /usr/local/bin/
+    - cp motif/contour_extractors/resources/hll $HOME/env
     - bash .travis_dependencies.sh
     - export PATH="$HOME/env/miniconda$TRAVIS_PYTHON_VERSION/bin:$PATH";
     - hash -r
