@@ -378,10 +378,9 @@ def get_contour_shape_features(times, freqs, sample_rate, poly_degree=5,
     poly_coeffs, y_poly, y_diff = _fit_poly(
         poly_degree, freqs, grid=times
     )
-
     # remove amplitude envelope using hilbert transform
-    y_hilbert = scipy.signal.hilbert(y_diff)
-    y_sin = y_diff / np.abs(y_hilbert)
+    y_hilbert = np.abs(scipy.signal.hilbert(y_diff))
+    y_sin = y_diff / y_hilbert
 
     # get ideal vibrato parameters from resulting signal
     vib_freq, vib_phase = _fit_normalized_cosine(
@@ -403,7 +402,7 @@ def get_contour_shape_features(times, freqs, sample_rate, poly_degree=5,
 
     # if vibrato is present, set extent and rate. Otherwise they are zero.
     if vib_coverage > 0:
-        vib_extent = np.mean(np.abs(y_hilbert)[coverage])
+        vib_extent = np.mean(y_hilbert[coverage])
         vib_rate = vib_freq
     else:
         vib_extent = 0.0

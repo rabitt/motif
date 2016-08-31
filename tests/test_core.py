@@ -7,8 +7,6 @@ import numpy as np
 from mock import patch
 
 from motif import core
-# from motif import features
-# from motif import MvGaussian
 
 
 def relpath(f):
@@ -269,42 +267,34 @@ class TestFormatContourData(unittest.TestCase):
 class TestFormatAnnotation(unittest.TestCase):
 
     def test_format_annotation(self):
+        new_times = np.array([0.0, 0.5, 1.0, 1.5, 2.0])
         times = np.array([0.0, 1.0, 2.0])
         freqs = np.array([50.0, 60.0, 70.0])
-        duration = 2.0
-        sample_rate = 2.0
-        actual_times, actual_cent, actual_voicing = core._format_annotation(
-            times, freqs, duration, sample_rate
+        actual_cent, actual_voicing = core._format_annotation(
+            new_times, times, freqs
         )
-        expected_times = np.array([0.0, 0.5, 1.0, 1.5, 2.0])
         expected_cent = np.array([
             2786.31371386, 2944.13435737, 3101.95500087,
             3235.39045367, 3368.82590647
         ])
-
         expected_voicing = np.array([True, True, True, True, True])
 
-        self.assertTrue(array_equal(expected_times, actual_times))
         self.assertTrue(array_equal(expected_cent, actual_cent))
         self.assertTrue(array_equal(expected_voicing, actual_voicing))
 
     def test_format_annotation_same_times(self):
+        new_times = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
         times = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
         freqs = np.array([50.0, 60.0, 70.0, 0.0, 0.0, 0.0])
-        duration = 5.0
-        sample_rate = 1.0
-        actual_times, actual_cent, actual_voicing = core._format_annotation(
-            times, freqs, duration, sample_rate
+        actual_cent, actual_voicing = core._format_annotation(
+            new_times, times, freqs
         )
-        expected_times = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
         expected_cent = np.array([
             2786.31371386, 3101.95500087,
             3368.82590647, 0.0, 0.0, 0.0
         ])
-
         expected_voicing = np.array([True, True, True, False, False, False])
 
-        self.assertTrue(array_equal(expected_times, actual_times))
         self.assertTrue(array_equal(expected_cent, actual_cent))
         self.assertTrue(array_equal(expected_voicing, actual_voicing))
 

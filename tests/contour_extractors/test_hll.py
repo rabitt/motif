@@ -28,7 +28,7 @@ class TestHLL(unittest.TestCase):
         self.etr = hll.HLL()
 
     def test_sample_rate(self):
-        expected = 256.0/44100.0
+        expected = 172.265625
         actual = self.etr.sample_rate
         self.assertEqual(expected, actual)
 

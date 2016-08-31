@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-""" Classification using a random forrest
+"""Random Forest contour classifier.
 """
 from __future__ import print_function
 from sklearn.ensemble import RandomForestClassifier as RFC
@@ -11,7 +10,28 @@ from motif.core import ContourClassifier
 
 
 class RandomForest(ContourClassifier):
+    '''Random Forest contour classifier.
 
+    Attributes
+    ----------
+    n_estimators : int
+        Number of trees in the forest
+    n_jobs : int
+        Number of cores to use. -1 uses maximum availalbe
+    class_weight : str
+        How to set class weights.
+    max_features : int or None
+        The maximum number of features that can be used in a single branch.
+    max_param : int
+        Maximum depth value to sweep
+    param_step : int
+        Step size in parameter sweep
+    clf : sklearn.ensemble.RandomForestClassifier
+        Classifier
+    max_depth : int
+        The max_depth parameter chosen by cross validation.
+
+    '''
     def __init__(self, n_estimators=100, n_jobs=-1, class_weight='auto',
                  max_features=None, max_param=100, param_step=5):
         '''
@@ -84,16 +104,36 @@ class RandomForest(ContourClassifier):
 
     @property
     def threshold(self):
-        """Positive class is score >= 0.5"""
+        """ The threshold determining the positive class.
+
+        Returns
+        -------
+        threshold : flaot
+            melodiness scores
+        """
         return 0.5
 
     @classmethod
     def get_id(cls):
-        """Method to get the id of the extractor type"""
+        """ The ContourClassifier identifier
+
+        Returns
+        -------
+        id : string
+            class identifier
+        """
         return 'random_forest'
 
     def _cross_val_sweep(self, X, Y):
-        """ Choose best parameter by performing cross fold validation
+        """ Choose best parameter by performing cross fold validation.
+
+        Parameters
+        ----------
+        X : np.array [n_samples, n_features]
+            Training features.
+        Y : np.array [n_samples]
+            Training labels
+
         """
         scores = []
         for max_depth in np.arange(5, self.max_param, self.param_step):
@@ -106,10 +146,7 @@ class RandomForest(ContourClassifier):
 
         depth = [score[0] for score in scores]
         accuracy = [score[1] for score in scores]
-        # std_dev = [score[2] for score in scores]
 
         best_depth = depth[np.argmax(accuracy)]
-        # max_cv_accuracy = np.max(accuracy)
-        # plot_data = (depth, accuracy, std_dev)
 
         self.max_depth = best_depth

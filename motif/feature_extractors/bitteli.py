@@ -1,11 +1,30 @@
-"""Features as in Melodia.
+"""Bitteli feature extractor.
 """
-from motif.core import FeatureExtractor
-from motif.feature_extractors import utils
 import numpy as np
 
-class BitteliFeatures(FeatureExtractor):
+from motif.core import FeatureExtractor
+from motif.feature_extractors import utils
 
+
+class BitteliFeatures(FeatureExtractor):
+    '''Bitteli feature extractor
+
+    Attributes
+    ----------
+    ref_hz : float
+        Reference frequency (Hz) for converting to cents.
+    poly_degree : int
+        Polynomial fit degree.
+    min_freq : float
+        Minimum possible vibrato frequency (Hz).
+    max_freq : float
+        Maximum possible vibrato frequency (Hz).
+    freq_step : float
+        Step in Hz between frequencies to search.
+    vibrato_threshold : float
+        Threshold on the average vibrato residual to be considered vibrato.
+
+    '''
     def __init__(self):
         self.ref_hz = 55.0
         self.poly_degree = 5
@@ -16,13 +35,23 @@ class BitteliFeatures(FeatureExtractor):
         FeatureExtractor.__init__(self)
 
     def get_feature_vector(self, times, freqs_hz, salience, sample_rate):
-        """
+        """Get feature vector for a contour.
+
         Parameters
         ----------
-
+        times : np.array
+            Contour times
+        freqs_hz : np.array
+            Contour frequencies (Hz)
+        salience : np.array
+            Contour salience
+        sample_rate : float
+            Contour sample rate.
 
         Returns
         -------
+        feature_vector : np.array
+            Feature vector.
 
         """
         freqs_cents = utils.hz_to_cents(freqs_hz, ref_hz=self.ref_hz)
@@ -53,6 +82,14 @@ class BitteliFeatures(FeatureExtractor):
 
     @property
     def feature_names(self):
+        """Get feature names.
+
+        Returns
+        -------
+        feature_names : list
+            List of feature names.
+
+        """
         feature_names = [
             'vibrato rate',
             'vibrato extent',
@@ -92,5 +129,11 @@ class BitteliFeatures(FeatureExtractor):
 
     @classmethod
     def get_id(cls):
-        """Method to get the id of the feature type"""
+        """ The FeatureExtractor identifier
+
+        Returns
+        -------
+        id : string
+            class identifier
+        """
         return 'bitteli'

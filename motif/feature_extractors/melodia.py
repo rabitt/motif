@@ -1,16 +1,44 @@
-"""Features as in Melodia.
+"""Melodia feature extractor.
 """
-from motif.core import FeatureExtractor
-from motif.feature_extractors import utils
 import numpy as np
 
-class MelodiaFeatures(FeatureExtractor):
+from motif.core import FeatureExtractor
+from motif.feature_extractors import utils
 
+
+class MelodiaFeatures(FeatureExtractor):
+    '''Melodia feature extractor
+
+    Attributes
+    ----------
+    ref_hz : float
+        Reference frequency (Hz) for converting to cents.
+
+    '''
     def __init__(self):
         self.ref_hz = 55.0
         FeatureExtractor.__init__(self)
 
     def get_feature_vector(self, times, freqs_hz, salience, sample_rate):
+        """Get feature vector for a contour.
+
+        Parameters
+        ----------
+        times : np.array
+            Contour times
+        freqs_hz : np.array
+            Contour frequencies (Hz)
+        salience : np.array
+            Contour salience
+        sample_rate : float
+            Contour sample rate.
+
+        Returns
+        -------
+        feature_vector : np.array
+            Feature vector.
+
+        """
         freqs_cents = utils.hz_to_cents(freqs_hz, ref_hz=self.ref_hz)
 
         features = [
@@ -29,6 +57,14 @@ class MelodiaFeatures(FeatureExtractor):
 
     @property
     def feature_names(self):
+        """Get feature names.
+
+        Returns
+        -------
+        feature_names : list
+            List of feature names.
+
+        """
         feature_names = [
             'onset',
             'offset',
@@ -47,5 +83,11 @@ class MelodiaFeatures(FeatureExtractor):
 
     @classmethod
     def get_id(cls):
-        """Method to get the id of the feature type"""
+        """ The FeatureExtractor identifier
+
+        Returns
+        -------
+        id : string
+            class identifier
+        """
         return 'melodia'

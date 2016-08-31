@@ -28,7 +28,7 @@ class TestSalamon(unittest.TestCase):
         self.etr = salamon.Salamon()
 
     def test_sample_rate(self):
-        expected = 128.0/44100.0
+        expected = 344.53125
         actual = self.etr.sample_rate
         self.assertEqual(expected, actual)
 

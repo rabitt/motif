@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """HLL method for extracting contours.
 """
 import csv
@@ -34,10 +33,51 @@ BINARY_AVAILABLE = _check_binary()
 
 
 class HLL(ContourExtractor):
+    '''HLL method for extracting contours.
 
+    Attributes
+    ----------
+    hop_size : int
+        Seed detection CQT hop size.
+    n_cqt_bins : int
+        Number of seed detection CQT bins.
+    bins_per_octave : int
+        Number of seed detection CQT bins per octave.
+    min_note : str
+        Minimum seed detection CQT note.
+    med_filt_len : int
+        Seed detection frequency band median filter length.
+    peak_thresh : float
+        Seed detection peak picking threshold.
+    pre_max : int >= 0
+        Peak-picking number of samples before `n` over which max is computed
+    post_max : int >= 1
+        Peak-picking number of samples after `n` over which max is computed
+    pre_avg : int >= 0
+        Peak-picking number of samples before `n` over which mean is computed
+    post_avg : int >= 1
+        Peak-picking number of samples after `n` over which mean is computed
+    delta : float >= 0
+        Peak-picking threshold offset for mean
+    wait : int >= 0
+        Peak-picking number of samples to wait after picking a peak
+    n_harmonics : int
+        Number of HLL harmonics.
+    f_cutoff : float
+        HLL cutoff frequency in Hz.
+    tracking_gain : float
+        HLL tracking gain.
+    min_contour_len : int
+        HLL minimum number of samples in a single contour.
+    amplitude_threshold : float
+        HLL minimum amplitude threshold.
+    tracking_update_threshold : float
+        HLL tracking update threshold.
+
+    '''
     def __init__(self):
         # seed detection parameters
-        self.hop_length = 8192
+        self.hop_size = 8192
         self.n_cqt_bins = 12*6
         self.bins_per_octave = 12
         self.min_note = 'E1'
@@ -63,20 +103,32 @@ class HLL(ContourExtractor):
 
     @property
     def sample_rate(self):
-        """Sample rate of output contours"""
-        return 256.0/44100.0
+        """Sample rate of output contours
+
+        Returns
+        -------
+        sample_rate : float
+            Number of samples per second.
+
+        """
+        return 44100.0/256.0
 
     @classmethod
     def get_id(cls):
-        """Identifier of this extractor."""
+        """Identifier of this extractor.
+
+        Returns
+        -------
+        id : str
+            Identifier of this extractor.
+
+        """
         return "hll"
 
     def compute_contours(self, audio_filepath):
         """Compute contours using Harmonic Locked Loops.
         This calls a binary in the background, which creates a csv file.
-        The csv file is loaded into memory and the file is deleted, unless
-        clean=False. When recompute=False, this will first look for an existing
-        precomputed contour file and if successful will load it directly.
+        The csv file is loaded into memory and the file is deleted.
 
         Parameters
         ----------
@@ -137,6 +189,19 @@ class HLL(ContourExtractor):
         )
 
     def get_seeds(self, audio_filepath):
+        """Get the seeds file to pass to the HLL tracker.
+
+        Parameters
+        ----------
+        audio_filepath : str
+            Path to audio file.
+
+        Returns
+        -------
+        seeds_fpath : str
+            Path to the seeds output file.
+
+        """
         y, sr = librosa.load(audio_filepath, sr=None)
         cqt, samples, freqs = self._compute_cqt(y, sr)
         seeds = self._pick_seeds_cqt(cqt, freqs, samples)
@@ -148,9 +213,28 @@ class HLL(ContourExtractor):
         return seeds_fpath
 
     def _compute_cqt(self, y, sr):
+        """Compute a CQT.
+
+        Parameters
+        ----------
+        y : np.array
+            Audio signal
+        sr : float
+            Audio singal sample rate
+
+        Returns
+        -------
+        cqt_log : np.array [n_samples, n_freqs]
+            Log amplitude CQT.
+        samples : np.array [n_samples]
+            CQT time stamps.
+        freqs : np.array [n_freqs]
+            CQT frequencies.
+
+        """
         fmin = librosa.note_to_hz(self.min_note)
         cqt = np.abs(librosa.cqt(
-            y, sr=sr, hop_length=self.hop_length, fmin=fmin, filter_scale=4,
+            y, sr=sr, hop_length=self.hop_size, fmin=fmin, filter_scale=4,
             bins_per_octave=self.bins_per_octave, n_bins=self.n_cqt_bins,
             real=False
         ))
@@ -160,7 +244,7 @@ class HLL(ContourExtractor):
             n_bins=self.n_cqt_bins
         )
         samples = librosa.frames_to_samples(
-            range(n_time_frames), hop_length=self.hop_length
+            range(n_time_frames), hop_length=self.hop_size
         )
 
         # compute log amplitude
@@ -171,6 +255,23 @@ class HLL(ContourExtractor):
         return cqt_log, samples, freqs
 
     def _pick_seeds_cqt(self, cqt, cqt_freqs, samples):
+        """Compute a CQT.
+
+        Parameters
+        ----------
+        cqt : np.array [n_samples, n_freqs]
+            Log amplitude CQT.
+        freqs : np.array [n_freqs]
+            CQT frequencies.
+        samples : np.array [n_samples]
+            CQT time stamps.
+
+        Returns
+        -------
+        seeds : np.array [n_seeds, 2]
+            Array of time, frequency seeds
+
+        """
         seeds = []
         for i, freq in enumerate(cqt_freqs):
             freq_band = cqt[i, :]
@@ -220,11 +321,11 @@ class HLL(ContourExtractor):
                 index.append(row[0])
                 times.append(row[1])
                 freqs.append(row[2])
-                contour_sal.append(row[3:])
+                contour_sal.append(row[3]) # was 3: - generalize later!
 
         # Add column with annotation values in cents
         index = np.array(index, dtype=int)
-        times = np.array(times, dtype=float) / self.sample_rate
+        times = np.array(times, dtype=float) / self.audio_samplerate
         freqs = np.array(freqs, dtype=float)
         contour_sal = np.array(contour_sal, dtype=float)
 

@@ -6,9 +6,6 @@ import numpy as np
 
 from motif.feature_extractors import utils
 
-# import warnings
-# warnings.simplefilter("error")
-
 
 def array_equal(array1, array2):
     return np.all(np.isclose(array1, array2))
