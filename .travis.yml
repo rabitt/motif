@@ -2,9 +2,9 @@ sudo: false
 
 language: python
 
-# cache:
-#   directories:
-#   - $HOME/env
+cache:
+  directories:
+  - $HOME/env
 
 notifications:
   email: false

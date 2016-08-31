@@ -5,7 +5,7 @@ import os
 import numpy as np
 
 from motif import run
-from motif.contour_extractors.HLL import BINARY_AVAILABLE
+from motif.contour_extractors.hll import BINARY_AVAILABLE
 
 
 def relpath(f):
