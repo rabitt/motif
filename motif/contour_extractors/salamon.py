@@ -54,7 +54,19 @@ class Salamon(ContourExtractor):
             Number of samples per second.
 
         """
-        return 44100.0/128.0
+        return 44100.0 / 128.0
+
+    @property
+    def min_contour_len(self):
+        """Minimum allowed contour length.
+
+        Returns
+        -------
+        min_contour_len : float
+            Minimum allowed contour length in seconds.
+
+        """
+        return 0.0
 
     @classmethod
     def get_id(cls):
