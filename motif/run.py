@@ -82,7 +82,7 @@ def process_with_labels(contour_extractor, feature_extractor, file_pairs):
     labels_list = []
 
     for audio_filepath, annotation in file_pairs:
-
+        print(audio_filepath)
         ctr = contour_extractor.compute_contours(audio_filepath)
         Y_train, _ = ctr.compute_labels(annotation)
         X_train = feature_extractor.compute_all(ctr)
