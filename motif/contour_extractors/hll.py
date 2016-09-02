@@ -67,7 +67,7 @@ class HLL(ContourExtractor):
         HLL cutoff frequency in Hz.
     tracking_gain : float
         HLL tracking gain.
-    min_contour_len : int
+    min_contour_len_samples : int
         HLL minimum number of samples in a single contour.
     amplitude_threshold : float
         HLL minimum amplitude threshold.
@@ -78,24 +78,25 @@ class HLL(ContourExtractor):
     def __init__(self):
         # seed detection parameters
         self.hop_size = 8192
-        self.n_cqt_bins = 12*6
+        self.n_cqt_bins = 12 * 4
         self.bins_per_octave = 12
-        self.min_note = 'E1'
+        self.min_note = 'E2'
         self.med_filt_len = 5
         self.peak_thresh = 0.4
-        ## librosa peak pick params for seed detection
+
+        # librosa peak pick params for seed detection
         self.pre_max = 3
         self.post_max = 3
-        self.pre_avg = 5
-        self.post_avg = 7
+        self.pre_avg = 3
+        self.post_avg = 3
         self.delta = 0.02
-        self.wait = 10
+        self.wait = 2
 
         # HLL paramters
         self.n_harmonics = 5
         self.f_cutoff = 30  # Hz
         self.tracking_gain = 0.0005
-        self.min_contour_len = 11025
+        self.min_contour_len_samples = 11025
         self.amplitude_threshold = 0.001
         self.tracking_update_threshold = 70.0
 
@@ -111,7 +112,19 @@ class HLL(ContourExtractor):
             Number of samples per second.
 
         """
-        return 44100.0/256.0
+        return 44100.0 / 256.0
+
+    @property
+    def min_contour_len(self):
+        """Minimum allowed contour length.
+
+        Returns
+        -------
+        min_contour_len : float
+            Minimum allowed contour length in seconds.
+
+        """
+        return self.min_contour_len_samples / self.audio_samplerate
 
     @classmethod
     def get_id(cls):
@@ -167,7 +180,7 @@ class HLL(ContourExtractor):
             "{}".format(self.n_harmonics),
             "{}".format(self.f_cutoff),
             "{}".format(self.tracking_gain),
-            "{}".format(self.min_contour_len),
+            "{}".format(self.min_contour_len_samples),
             "{}".format(self.amplitude_threshold),
             "{}".format(self.tracking_update_threshold)
         ]
@@ -183,6 +196,10 @@ class HLL(ContourExtractor):
         os.remove(contours_fpath)
         os.remove(tmp_audio)
         os.remove(seed_fpath)
+
+        (c_numbers, c_times, c_freqs, c_sal) = self._postprocess_contours(
+            c_numbers, c_times, c_freqs, c_sal
+        )
 
         return Contours(
             c_numbers, c_times, c_freqs, c_sal, self.sample_rate, audio_filepath
@@ -203,7 +220,8 @@ class HLL(ContourExtractor):
 
         """
         y, sr = librosa.load(audio_filepath, sr=None)
-        cqt, samples, freqs = self._compute_cqt(y, sr)
+        y_harmonic = librosa.effects.harmonic(y, margin=10)
+        cqt, samples, freqs = self._compute_cqt(y_harmonic, sr)
         seeds = self._pick_seeds_cqt(cqt, freqs, samples)
 
         seeds_fpath = tmp.mktemp('.csv')
@@ -250,7 +268,11 @@ class HLL(ContourExtractor):
         # compute log amplitude
         cqt_log = librosa.logamplitude(cqt**2, ref_power=np.max)
         cqt_log = cqt_log - np.min(np.min(cqt_log))
-        cqt_log = cqt_log/(np.max(np.max(cqt_log)))
+        cqt_log = cqt_log / (np.max(np.max(cqt_log)))
+
+        cqt_log = cqt_log.T - np.min(cqt_log, axis=1)
+        cqt_log = cqt_log / np.max(cqt_log.T, axis=1)
+        cqt_log = cqt_log.T
 
         return cqt_log, samples, freqs
 
@@ -273,21 +295,23 @@ class HLL(ContourExtractor):
 
         """
         seeds = []
+        cqt_diff = np.diff(cqt, axis=1)
         for i, freq in enumerate(cqt_freqs):
-            freq_band = cqt[i, :]
-            freq_band = freq_band/np.max(freq_band)
-            freq_band_smooth = signal.medfilt(freq_band, self.med_filt_len)
+            freq_band = cqt_diff[i, :]
+
+            # freq_band_smooth = signal.medfilt(freq_band, self.med_filt_len)
             peak_locs = librosa.util.peak_pick(
-                freq_band_smooth, self.pre_max, self.post_max, self.pre_avg,
+                freq_band, self.pre_max, self.post_max, self.pre_avg,
                 self.post_avg, self.delta, self.wait
             )
             if len(peak_locs) > 0:
                 peak_locs = peak_locs[
-                    (freq_band_smooth[peak_locs] > self.peak_thresh)
+                    (freq_band[peak_locs] > self.peak_thresh)
                 ]
                 for peak_loc in peak_locs:
                     sample = samples[peak_loc]
                     seeds.append([sample, freq])
+
         seeds = np.array(seeds)
         return seeds
 
@@ -321,7 +345,7 @@ class HLL(ContourExtractor):
                 index.append(row[0])
                 times.append(row[1])
                 freqs.append(row[2])
-                contour_sal.append(row[3]) # was 3: - generalize later!
+                contour_sal.append(row[3])  # TODO: was 3: - generalize later!
 
         # Add column with annotation values in cents
         index = np.array(index, dtype=int)
