@@ -22,8 +22,8 @@ class Contours(object):
 
     Attributes
     ----------
-    nums : set
-        Set of contour numbers
+    nums : list
+        Ordered list of contour numbers
     index_mapping : dict
         Mapping from contour number to the indices into times/freqs/salience
         where the contour is active
@@ -226,14 +226,16 @@ class Contours(object):
             Each row has the form [time, freq1, freq2, ...]
             Each row may have any number of frequencies.
         '''
-        freqs = [[] for i in range(len(self.uniform_times))]
+        n_uniform_times = len(self.uniform_times)
+        freqs = [[] for i in range(n_uniform_times)]
+
         time_idx = np.round(self.times * self.sample_rate).astype(int)
+        time_idx[time_idx >= n_uniform_times] = n_uniform_times - 1
         for i, freq in zip(time_idx, self.freqs):
             freqs[i].append(freq)
         freqs = [np.array(f).astype(float) for f in freqs]
 
         return self.uniform_times, freqs
-
 
     def coverage(self, annotation_fpath, single_f0=True):
         """ Compute how much the set of contours covers the annotation
@@ -244,7 +246,7 @@ class Contours(object):
             Path to annotation file.
         single_f0 : bool
             True for a file containing a single pitch per time stamp
-            False for a file containing possibly multiple pitches per time stamp
+            False for a file containing possibly multiple pitches / time stamp
 
         Returns
         -------
@@ -257,14 +259,44 @@ class Contours(object):
             ref_times, ref_freqs = _load_annotation(
                 annotation_fpath, n_freqs=1, to_array=False
             )
+            ref_freqs = [f if f[0] != 0 else np.array([]) for f in ref_freqs]
+
         else:
             ref_times, ref_freqs = _load_annotation(
                 annotation_fpath, n_freqs=None, to_array=False
             )
+
         scores = multipitch.evaluate(
             ref_times, ref_freqs, est_times, est_freqs
         )
         return scores
+
+    def plot_with_annotation(self, annotation_fpath, single_f0=True):
+        if single_f0:
+            ref_times, ref_freqs = _load_annotation(
+                annotation_fpath, n_freqs=1, to_array=False
+            )
+            ref_freqs = [f if f[0] != 0 else np.array([]) for f in ref_freqs]
+
+        else:
+            ref_times, ref_freqs = _load_annotation(
+                annotation_fpath, n_freqs=None, to_array=False
+            )
+        plt.figure(figsize=(15, 12))
+        r_times = []
+        r_freqs = []
+        for t, freq in zip(ref_times, ref_freqs):
+            r_times.extend([t for f in freq])
+            r_freqs.extend([f for f in freq])
+
+        c1 = sns.color_palette('deep', 1)[0]
+        plt.semilogy(
+            np.array(r_times), np.array(r_freqs), '.k', basey=2, markersize=5
+        )
+        plt.semilogy(
+            self.times, self.freqs, '.', color=c1, basey=2, markersize=2
+        )
+        plt.show()
 
     def plot(self, style='contour'):
         '''Plot the contours.
@@ -293,6 +325,7 @@ class Contours(object):
         plt.xlabel('Time (sec)')
         plt.ylabel('Frequency (Hz)')
         plt.axis('tight')
+        plt.show()
 
     def save_contours_subset(self, output_fpath, output_nums):
         '''Save extracted contours where score >= threshold to a csv file.
@@ -303,8 +336,6 @@ class Contours(object):
             Path to save output csv file.
         output_nums : list
             List of contour numbers to save
-        threshold : float
-            Minimum score to be considered part of the target class.
 
         '''
         target_indices = []
@@ -319,7 +350,6 @@ class Contours(object):
                 self.freqs[target_indices],
                 self.salience[target_indices]
             ))
-
 
     def save(self, output_fpath):
         '''Save extracted contours to a csv file.
@@ -525,6 +555,12 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
         raise NotImplementedError("This property must return the sample rate "
                                   "of the output contours.")
 
+    @property
+    def min_contour_len(self):
+        """Property to get the minimum length of a contour in seconds"""
+        raise NotImplementedError("This property must return the minimum "
+                                  "contour length in seconds.")
+
     @classmethod
     def get_id(cls):
         """Method to get the id of the extractor type"""
@@ -573,11 +609,40 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
 
         return output_path
 
-
-    def _postprocess_contours(self):
+    def _postprocess_contours(self, index, times, freqs, salience):
         """Remove contours that are too short.
+
+        Parameters
+        ----------
+        index : array
+            array of contour numbers
+        times : array
+            array of contour times
+        freqs : array
+            array of contour frequencies
+        salience : array
+            array of contour salience values
+
+        Returns
+        -------
+        index_pruned : array
+            Pruned array of contour numbers
+        times_pruned : array
+            Pruned array of contour times
+        freqs_pruned : array
+            Pruned array of contour frequencies
+        salience_pruned : array
+            Pruned array of contour salience values
+
         """
-        raise NotImplementedError
+        keep_index = np.ones(times.shape).astype(bool)
+        for i in set(index):
+            this_idx = (index == i)
+            if np.ptp(times[this_idx]) <= self.min_contour_len:
+                keep_index[this_idx] = False
+
+        return (index[keep_index], times[keep_index],
+                freqs[keep_index], salience[keep_index])
 
 
 ###############################################################################
