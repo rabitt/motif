@@ -180,6 +180,17 @@ class TestFitNormalizedCosine(unittest.TestCase):
         self.assertAlmostEqual(expected_freq, actual_freq)
         self.assertAlmostEqual(expected_phase, actual_phase, places=1)
 
+    def test_line(self):
+        x = np.linspace(0, 1, 256)
+        y = (0.0 * x) + 2.0
+        expected_freq = 0.0
+        expected_phase = 0.0
+        actual_freq, actual_phase = utils._fit_normalized_cosine(
+            x, y, min_freq=10, max_freq=15, step=0.1
+        )
+        self.assertEqual(expected_freq, actual_freq)
+        self.assertEqual(expected_phase, actual_phase)
+
 
 class TestComputeCoverageArray(unittest.TestCase):
 
@@ -240,10 +251,24 @@ class TestGetContourShapeFeatures(unittest.TestCase):
         actual = utils.get_contour_shape_features(times, freqs, sample_rate)
         self.assertTrue(array_equal(expected, actual))
 
+    def test_flat_line(self):
+        sample_rate = 2000
+        times = np.linspace(0, 1, sample_rate)
+        freqs = 0.0 * times + 440.0
+        expected = np.array([
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            440.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0
+        ])
+        actual = utils.get_contour_shape_features(times, freqs, sample_rate)
+        self.assertTrue(array_equal(expected, actual))
+
     def test_line_with_vib(self):
         sample_rate = 2000
         times = np.linspace(0, 1, sample_rate)
-        freqs = (1.2 * times + 440.0) + 7.3*np.cos(2.0 * np.pi * 12.0 * times)
+        freqs = (
+            (1.2 * times + 440.0) + 7.3 * np.cos(2.0 * np.pi * 12.0 * times)
+        )
         expected = np.array([
             12.0, 7.296015, 1.0, 1.0, 1.0, 1.0,
             4.40586339e+02, -9.14578468e+00,
