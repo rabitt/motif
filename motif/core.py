@@ -73,7 +73,7 @@ class Contours(object):
         self.index = index
         self.times = times
         self.freqs = freqs
-        self.salience = salience / np.max(salience)
+        self.salience = self._set_salience(salience)
         self.sample_rate = sample_rate
         self.audio_filepath = audio_filepath
 
@@ -81,6 +81,12 @@ class Contours(object):
         self.index_mapping = self._compute_index_mapping()
         self.duration = self._compute_duration()
         self.uniform_times = self._compute_uniform_times()
+
+    def _set_salience(self, salience):
+        if len(salience) == 0 or np.max(salience) == 0:
+            self.salience = salience
+        else:
+            self.salience = salience / np.max(salience)
 
     def _compute_nums(self):
         '''Compute the list of contour index numbers
@@ -282,7 +288,7 @@ class Contours(object):
             ref_times, ref_freqs = _load_annotation(
                 annotation_fpath, n_freqs=None, to_array=False
             )
-        plt.figure(figsize=(15, 12))
+
         r_times = []
         r_freqs = []
         for t, freq in zip(ref_times, ref_freqs):
@@ -291,12 +297,12 @@ class Contours(object):
 
         c1 = sns.color_palette('deep', 1)[0]
         plt.semilogy(
-            np.array(r_times), np.array(r_freqs), '.k', basey=2, markersize=5
+            np.array(r_times), np.array(r_freqs), 'ok', basey=2, markersize=5
         )
-        plt.semilogy(
-            self.times, self.freqs, '.', color=c1, basey=2, markersize=2
-        )
-        plt.show()
+        for i in self.nums:
+            plt.semilogy(self.contour_times(i), self.contour_freqs(i),
+                         basey=2, markersize=2)
+        # plt.show()
 
     def plot(self, style='contour'):
         '''Plot the contours.
@@ -325,7 +331,7 @@ class Contours(object):
         plt.xlabel('Time (sec)')
         plt.ylabel('Frequency (Hz)')
         plt.axis('tight')
-        plt.show()
+        # plt.show()
 
     def save_contours_subset(self, output_fpath, output_nums):
         '''Save extracted contours where score >= threshold to a csv file.
