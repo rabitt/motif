@@ -4,7 +4,6 @@ import csv
 import librosa
 import numpy as np
 import os
-from scipy import signal
 import subprocess
 from subprocess import CalledProcessError
 import tempfile as tmp
@@ -78,11 +77,12 @@ class HLL(ContourExtractor):
     def __init__(self):
         # seed detection parameters
         self.hop_size = 8192
-        self.n_cqt_bins = 12 * 4
+        self.n_octaves = 6
         self.bins_per_octave = 12
-        self.min_note = 'E2'
-        self.med_filt_len = 5
+        self.min_note = 'E1'
         self.peak_thresh = 0.4
+        self.filter_scale = 2.0
+        self.avg_filt_len = 12
 
         # librosa peak pick params for seed detection
         self.pre_max = 3
@@ -103,6 +103,18 @@ class HLL(ContourExtractor):
         ContourExtractor.__init__(self)
 
     @property
+    def audio_samplerate(self):
+        """Sample rate of preprocessed audio.
+
+        Returns
+        -------
+        audio_samplerate : float
+            Number of samples per second.
+
+        """
+        return 44100.0
+
+    @property
     def sample_rate(self):
         """Sample rate of output contours
 
@@ -112,7 +124,7 @@ class HLL(ContourExtractor):
             Number of samples per second.
 
         """
-        return 44100.0 / 256.0
+        return self.audio_samplerate / 256.0
 
     @property
     def min_contour_len(self):
@@ -191,7 +203,9 @@ class HLL(ContourExtractor):
                 "Unable to find HLL output file {}".format(contours_fpath)
             )
 
-        c_numbers, c_times, c_freqs, c_sal = self._load_contours(contours_fpath)
+        c_numbers, c_times, c_freqs, c_sal = self._load_contours(
+            contours_fpath
+        )
 
         os.remove(contours_fpath)
         os.remove(tmp_audio)
@@ -202,7 +216,8 @@ class HLL(ContourExtractor):
         )
 
         return Contours(
-            c_numbers, c_times, c_freqs, c_sal, self.sample_rate, audio_filepath
+            c_numbers, c_times, c_freqs, c_sal, self.sample_rate,
+            audio_filepath
         )
 
     def get_seeds(self, audio_filepath):
@@ -219,8 +234,8 @@ class HLL(ContourExtractor):
             Path to the seeds output file.
 
         """
-        y, sr = librosa.load(audio_filepath, sr=None)
-        y_harmonic = librosa.effects.harmonic(y, margin=10)
+        y, sr = librosa.load(audio_filepath, sr=44100)
+        y_harmonic = librosa.effects.harmonic(y)
         cqt, samples, freqs = self._compute_cqt(y_harmonic, sr)
         seeds = self._pick_seeds_cqt(cqt, freqs, samples)
 
@@ -229,6 +244,34 @@ class HLL(ContourExtractor):
             writer = csv.writer(fhandle, delimiter=',')
             writer.writerows(seeds)
         return seeds_fpath
+
+    def _moving_average(self, a):
+        n = self.avg_filt_len
+        ret = np.cumsum(a, dtype=float)
+        ret[n:] = ret[n:] - ret[:-n]
+        return ret[n - 1:] / n
+
+    def _norm_matrix(mat, overall=True, time=True, freq=True):
+        if overall:
+            mat = mat - np.min(mat)
+            m = np.max(mat)
+            if m == 0:
+                m = 1
+            mat = mat / m
+
+        if time:
+            mat = (mat.T - np.min(mat, axis=1)).T
+            m = np.max(mat, axis=1)
+            m[m == 0] = 1
+            mat = (mat.T / m).T
+
+        if freq:
+            mat = mat - np.min(mat, axis=0)
+            m = np.max(mat, axis=0)
+            m[m == 0] = 1
+            mat = mat / m
+
+        return mat
 
     def _compute_cqt(self, y, sr):
         """Compute a CQT.
@@ -251,30 +294,28 @@ class HLL(ContourExtractor):
 
         """
         fmin = librosa.note_to_hz(self.min_note)
+        bins_per_octave = 12
+        n_cqt_bins = bins_per_octave * self.n_octaves
         cqt = np.abs(librosa.cqt(
-            y, sr=sr, hop_length=self.hop_size, fmin=fmin, filter_scale=4,
-            bins_per_octave=self.bins_per_octave, n_bins=self.n_cqt_bins,
+            y, sr=sr, hop_length=self.hop_size, fmin=fmin,
+            filter_scale=self.filter_scale,
+            bins_per_octave=bins_per_octave, n_bins=n_cqt_bins,
             real=False
         ))
+
+        cqt = self._norm_matrix(cqt)
+
         n_time_frames = cqt.shape[1]
+
         freqs = librosa.cqt_frequencies(
-            fmin=fmin, bins_per_octave=self.bins_per_octave,
-            n_bins=self.n_cqt_bins
+            fmin=fmin, bins_per_octave=bins_per_octave,
+            n_bins=n_cqt_bins
         )
         samples = librosa.frames_to_samples(
             range(n_time_frames), hop_length=self.hop_size
         )
 
-        # compute log amplitude
-        cqt_log = librosa.logamplitude(cqt**2, ref_power=np.max)
-        cqt_log = cqt_log - np.min(np.min(cqt_log))
-        cqt_log = cqt_log / (np.max(np.max(cqt_log)))
-
-        cqt_log = cqt_log.T - np.min(cqt_log, axis=1)
-        cqt_log = cqt_log / np.max(cqt_log.T, axis=1)
-        cqt_log = cqt_log.T
-
-        return cqt_log, samples, freqs
+        return cqt, samples, freqs
 
     def _pick_seeds_cqt(self, cqt, cqt_freqs, samples):
         """Compute a CQT.
@@ -295,13 +336,12 @@ class HLL(ContourExtractor):
 
         """
         seeds = []
-        cqt_diff = np.diff(cqt, axis=1)
         for i, freq in enumerate(cqt_freqs):
-            freq_band = cqt_diff[i, :]
+            freq_band = cqt[i, :]
 
-            # freq_band_smooth = signal.medfilt(freq_band, self.med_filt_len)
+            freq_band_smooth = self._moving_average(freq_band)
             peak_locs = librosa.util.peak_pick(
-                freq_band, self.pre_max, self.post_max, self.pre_avg,
+                freq_band_smooth, self.pre_max, self.post_max, self.pre_avg,
                 self.post_avg, self.delta, self.wait
             )
             if len(peak_locs) > 0:

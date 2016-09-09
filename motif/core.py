@@ -550,10 +550,15 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
     precomputed contour file and if successful will load it directly.
     """
     def __init__(self):
-        self.audio_samplerate = 44100
         self.audio_channels = 1
         self.audio_bitdepth = 32
         self.audio_db_level = -3.0
+
+    @property
+    def audio_samplerate(self):
+        """Property to get the sample rate of the output contours"""
+        raise NotImplementedError("This property must return the sample rate "
+                                  "of the output contours.")
 
     @property
     def sample_rate(self):
