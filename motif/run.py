@@ -6,10 +6,10 @@ from .core import CONTOUR_EXTRACTOR_REGISTRY
 from .core import FEATURE_EXTRACTOR_REGISTRY
 from .core import CONTOUR_CLASSIFIER_REGISTRY
 
-from .core import ContourExtractor
-from .core import FeatureExtractor
-from .core import ContourClassifier
-from .core import ContourDecoder
+# from .core import ContourExtractor
+# from .core import FeatureExtractor
+# from .core import ContourClassifier
+# from .core import ContourDecoder
 
 
 def process(audio_files=None, training_pairs=None, testing_pairs=None,

@@ -44,6 +44,19 @@ BINARY_AVAILABLE = _check_binary()
 class Salamon(ContourExtractor):
     '''Salamon's method for extracting contours
     '''
+
+    @property
+    def audio_samplerate(self):
+        """Sample rate of preprocessed audio.
+
+        Returns
+        -------
+        audio_samplerate : float
+            Number of samples per second.
+
+        """
+        return 44100.0
+
     @property
     def sample_rate(self):
         """Sample rate of output contours

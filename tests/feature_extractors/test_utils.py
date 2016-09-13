@@ -129,7 +129,7 @@ class TestFitPoly(unittest.TestCase):
         self.assertTrue(array_equal(expected_diff, actual_diff))
 
     def test_cubic(self):
-        signal = np.array([0, 1.0/27.0, 8.0/27.0, 1.0])
+        signal = np.array([0, 1.0 / 27.0, 8.0 / 27.0, 1.0])
         expected_coeffs = np.array([0.0, 0.0, 0.0, 1.0])
         expected_diff = 0.0
         expected_approx = np.power(np.linspace(0, 1, 4), 3)
@@ -258,6 +258,18 @@ class TestGetContourShapeFeatures(unittest.TestCase):
         expected = np.array([
             0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
             440.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0
+        ])
+        actual = utils.get_contour_shape_features(times, freqs, sample_rate)
+        self.assertTrue(array_equal(expected, actual))
+
+    def test_zeros(self):
+        sample_rate = 2000
+        times = np.linspace(0, 1, sample_rate)
+        freqs = 0.0 * times
+        expected = np.array([
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
             0.0, 0.0
         ])
         actual = utils.get_contour_shape_features(times, freqs, sample_rate)

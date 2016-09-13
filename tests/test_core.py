@@ -241,6 +241,32 @@ class TestContours(unittest.TestCase):
         os.remove(fpath)
         self.assertTrue(array_equal(expected, actual))
 
+
+class TestContours2(unittest.TestCase):
+
+    def setUp(self):
+        self.index = np.array([0, 0, 1, 1, 1, 2])
+        self.times = np.array([0.0, 0.1, 0.0, 0.1, 0.2, 0.5])
+        self.freqs = np.array([440.0, 441.0, 50.0, 52.0, 55.0, 325.2])
+        self.salience = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        self.sample_rate = 10.0
+        self.audio_fpath = AUDIO_FILE
+        self.ctr = core.Contours(
+            self.index, self.times, self.freqs, self.salience,
+            self.sample_rate, self.audio_fpath
+        )
+
+    def test_salience(self):
+        expected = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        actual = self.ctr.salience
+        self.assertTrue(array_equal(expected, actual))
+
+    def test_contour_salience(self):
+        expected = np.array([0.0])
+        actual = self.ctr.contour_salience(2)
+        self.assertTrue(array_equal(expected, actual))
+
+
 class TestValidateContours(unittest.TestCase):
 
     def test_valid(self):
@@ -371,7 +397,8 @@ class TestContourExtractor(unittest.TestCase):
         self.assertEqual(self.cex.audio_db_level, -3.0)
 
     def test_audio_sample_rate(self):
-        self.assertEqual
+        with self.assertRaises(NotImplementedError):
+            self.cex.audio_samplerate
 
     def test_sample_rate(self):
         with self.assertRaises(NotImplementedError):
