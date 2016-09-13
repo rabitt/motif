@@ -182,7 +182,7 @@ class TestFitNormalizedCosine(unittest.TestCase):
 
     def test_line(self):
         x = np.linspace(0, 1, 256)
-        y = (0.0 * x) + 2.0
+        y = (0.0 * x) + 0.0
         expected_freq = 0.0
         expected_phase = 0.0
         actual_freq, actual_phase = utils._fit_normalized_cosine(

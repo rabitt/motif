@@ -6,6 +6,7 @@ import numpy as np
 
 from motif.contour_classifiers import random_forest
 
+
 def array_equal(array1, array2):
     return np.all(np.isclose(array1, array2))
 
@@ -14,7 +15,7 @@ class TestRandomForest(unittest.TestCase):
 
     def setUp(self):
         self.clf = random_forest.RandomForest(
-            n_estimators=2, max_param=15
+            n_estimators=2, n_iter_search=1
         )
 
     def test_n_estimators(self):
@@ -28,33 +29,18 @@ class TestRandomForest(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_class_weight(self):
-        expected = 'auto'
+        expected = 'balanced'
         actual = self.clf.class_weight
         self.assertEqual(expected, actual)
 
-    def test_max_features(self):
-        expected = None
-        actual = self.clf.max_features
-        self.assertEqual(expected, actual)
-
-    def test_max_param(self):
-        expected = 15
-        actual = self.clf.max_param
-        self.assertEqual(expected, actual)
-
-    def test_param_step(self):
-        expected = 5
-        actual = self.clf.param_step
+    def test_n_iter_search(self):
+        expected = 1
+        actual = self.clf.n_iter_search
         self.assertEqual(expected, actual)
 
     def test_clf(self):
         expected = None
         actual = self.clf.clf
-        self.assertEqual(expected, actual)
-
-    def test_max_depth(self):
-        expected = None
-        actual = self.clf.max_depth
         self.assertEqual(expected, actual)
 
     def test_predict_error(self):
@@ -71,7 +57,6 @@ class TestRandomForest(unittest.TestCase):
         Y = np.array([0, 1, 0, 1, 0, 0, 1, 1, 0, 1])
         self.clf.fit(X, Y)
         self.assertIsNotNone(self.clf.clf)
-        self.assertIsNotNone(self.clf.max_depth)
 
     def test_predict(self):
         X = np.array([
@@ -112,7 +97,9 @@ class TestRandomForest(unittest.TestCase):
         actual = self.clf.score(predicted_scores, y_target)
         self.assertEqual(expected['accuracy'], actual['accuracy'])
         self.assertAlmostEqual(expected['mcc'], actual['mcc'], places=1)
-        self.assertTrue(array_equal(expected['precision'], actual['precision']))
+        self.assertTrue(
+            array_equal(expected['precision'], actual['precision'])
+        )
         self.assertTrue(array_equal(expected['recall'], actual['recall']))
         self.assertTrue(array_equal(expected['f1'], actual['f1']))
         self.assertTrue(array_equal(expected['support'], actual['support']))

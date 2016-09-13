@@ -84,9 +84,9 @@ class Contours(object):
 
     def _set_salience(self, salience):
         if len(salience) == 0 or np.max(salience) == 0:
-            self.salience = salience
+            return salience
         else:
-            self.salience = salience / np.max(salience)
+            return salience / np.max(salience)
 
     def _compute_nums(self):
         '''Compute the list of contour index numbers
@@ -718,7 +718,6 @@ class FeatureExtractor(six.with_metaclass(MetaFeatureExtractor)):
 
         """
         features = []
-
         for i in ctr.nums:
             feature_vector = self.get_feature_vector(
                 ctr.contour_times(i),

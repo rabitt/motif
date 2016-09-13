@@ -251,7 +251,7 @@ class HLL(ContourExtractor):
         ret[n:] = ret[n:] - ret[:-n]
         return ret[n - 1:] / n
 
-    def _norm_matrix(mat, overall=True, time=True, freq=True):
+    def _norm_matrix(self, mat, overall=True, time=True, freq=True):
         if overall:
             mat = mat - np.min(mat)
             m = np.max(mat)

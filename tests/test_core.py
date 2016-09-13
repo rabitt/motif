@@ -337,7 +337,7 @@ class TestExtractorRegistry(unittest.TestCase):
 
     def test_keys(self):
         actual = sorted(core.CONTOUR_EXTRACTOR_REGISTRY.keys())
-        expected = sorted(['hll', 'salamon'])
+        expected = sorted(['hll', 'salamon', '__test__'])
         self.assertEqual(expected, actual)
 
     def test_types(self):
@@ -345,20 +345,41 @@ class TestExtractorRegistry(unittest.TestCase):
             self.assertTrue(issubclass(val, core.ContourExtractor))
 
 
+class CexTest(core.ContourExtractor):
+    @classmethod
+    def get_id(cls):
+        return '__test__'
+
+    @property
+    def audio_samplerate(self):
+        return 44100
+
+    @property
+    def min_contour_len(self):
+        return 1.0
+
+
 class TestContourExtractor(unittest.TestCase):
 
     def setUp(self):
         self.cex = core.ContourExtractor()
+        self.cex_test = CexTest()
 
     def test_inits(self):
-        self.assertEqual(self.cex.audio_samplerate, 44100)
         self.assertEqual(self.cex.audio_channels, 1)
         self.assertEqual(self.cex.audio_bitdepth, 32)
         self.assertEqual(self.cex.audio_db_level, -3.0)
 
+    def test_audio_sample_rate(self):
+        self.assertEqual
+
     def test_sample_rate(self):
         with self.assertRaises(NotImplementedError):
             self.cex.sample_rate
+
+    def test_min_contour_len(self):
+        with self.assertRaises(NotImplementedError):
+            self.cex.min_contour_len
 
     def test_get_id(self):
         with self.assertRaises(NotImplementedError):
@@ -369,26 +390,44 @@ class TestContourExtractor(unittest.TestCase):
             self.cex.compute_contours(AUDIO_FILE)
 
     def test_preprocess_audio(self):
-        tmp_audio = self.cex._preprocess_audio(AUDIO_FILE)
+        tmp_audio = self.cex_test._preprocess_audio(AUDIO_FILE)
         self.assertTrue(os.path.exists(tmp_audio))
 
     def test_preprocess_audio_passthrough(self):
-        tmp_audio = self.cex._preprocess_audio(
+        tmp_audio = self.cex_test._preprocess_audio(
             AUDIO_FILE, normalize_format=False, normalize_volume=False
         )
         self.assertTrue(os.path.exists(tmp_audio))
 
     def test_preprocess_audio_hpss(self):
         with self.assertRaises(NotImplementedError):
-            self.cex._preprocess_audio(AUDIO_FILE, hpss=True)
+            self.cex_test._preprocess_audio(AUDIO_FILE, hpss=True)
 
     def test_preprocess_audio_equal_loudness_filter(self):
         with self.assertRaises(NotImplementedError):
-            self.cex._preprocess_audio(AUDIO_FILE, equal_loudness_filter=True)
+            self.cex_test._preprocess_audio(
+                AUDIO_FILE, equal_loudness_filter=True)
 
     def test_post_process_contours(self):
-        with self.assertRaises(NotImplementedError):
-            self.cex._postprocess_contours()
+        index = np.array([0, 0, 1, 1, 1, 1])
+        times = np.array([0.0, 0.5, 1.0, 1.5, 2.0, 2.5])
+        frequency = np.array([60.0, 60.0, 201.0, 200.0, 200.0, 200.0])
+        salience = np.array([0.5, 0.5, 0.8, 0.8, 0.9, 0.8])
+
+        (actual_index, actual_times,
+         actual_freqs, actual_salience) = self.cex_test._postprocess_contours(
+            index, times, frequency, salience
+        )
+
+        expected_index = np.array([1, 1, 1, 1])
+        expected_times = np.array([1.0, 1.5, 2.0, 2.5])
+        expected_freqs = np.array([201.0, 200.0, 200.0, 200.0])
+        expected_salience = np.array([0.8, 0.8, 0.9, 0.8])
+
+        self.assertTrue(array_equal(expected_index, actual_index))
+        self.assertTrue(array_equal(expected_times, actual_times))
+        self.assertTrue(array_equal(expected_freqs, actual_freqs))
+        self.assertTrue(array_equal(expected_salience, actual_salience))
 
 
 class TestFeaturesRegistry(unittest.TestCase):
