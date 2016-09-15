@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-""" Score based on multivariate gaussian as in Meloida
+"""Multivariate Gaussian contour classifier.
 """
 import numpy as np
 from scipy.stats import boxcox
@@ -11,7 +10,20 @@ EPS = 1.0
 
 
 class MvGaussian(ContourClassifier):
+    '''Multivariate Gaussian contour classifier.
 
+    Attributes
+    ----------
+    rv_pos : scipy.stats._multivariate.multivariate_normal_gen
+        A multivariate gaussian modeling the positive class
+    rv_neg : scipy.stats._multivariate.multivariate_normal_gen
+        A multivariate gaussian modeling the negative class
+    n_feats : int
+        The number of features
+    lmbda : np.array
+        Array of length n_features with the optimal lambda.
+
+    '''
     def __init__(self):
         ContourClassifier.__init__(self)
 
@@ -78,12 +90,24 @@ class MvGaussian(ContourClassifier):
 
     @property
     def threshold(self):
-        """Positive class is score >= 1.0"""
+        """ The threshold determining the positive class.
+
+        Returns
+        -------
+        threshold : flaot
+            melodiness scores
+        """
         return 1.0
 
     @classmethod
     def get_id(cls):
-        """Method to get the id of the extractor type"""
+        """ The ContourClassifier identifier
+
+        Returns
+        -------
+        id : string
+            class identifier
+        """
         return 'mv_gaussian'
 
     def _fit_boxcox(self, X):

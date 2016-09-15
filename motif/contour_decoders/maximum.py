@@ -1,16 +1,18 @@
-# -*- coding: utf-8 -*-
-"""Max decoder.
+"""Maximum contour decoder.
 """
 from motif.core import ContourDecoder
 
-class MaxDecoder(ContourDecoder):
 
+class MaxDecoder(ContourDecoder):
+    ''' Maximum contour decoder.
+    '''
     def decode(self, ctr, Y):
         raise NotImplementedError
 
     @classmethod
     def get_id(cls):
         return 'maximum'
+
 
 # import numpy as np
 # from sklearn import metrics
@@ -253,23 +255,3 @@ class MaxDecoder(ContourDecoder):
 
 #     max_fscore = fbeta_scores[np.nanargmax(fbeta_scores)]
 #     best_threshold = thresholds[np.nanargmax(fbeta_scores)]
-
-#     if plot:
-#         plt.figure(1)
-#         plt.subplot(1, 2, 1)
-#         plt.plot(recall, precision, '.b', label='PR curve')
-#         plt.xlim([0.0, 1.0])
-#         plt.ylim([0.0, 1.0])
-#         plt.xlabel('Recall')
-#         plt.ylabel('Precision')
-#         plt.title('Precision-Recall Curve')
-#         plt.legend(loc="lower right", frameon=True)
-#         plt.subplot(1, 2, 2)
-#         plt.plot(thresholds, fbeta_scores[:-1], '.r', label='f1-score')
-#         plt.xlabel('Probability Threshold')
-#         plt.ylabel('F1 score')
-#         plt.show()
-
-#     plot_data = (recall, precision, thresholds, fbeta_scores[:-1])
-
-#     return best_threshold, max_fscore, plot_data

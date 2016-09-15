@@ -3,7 +3,7 @@
 """
 import csv
 import matplotlib.pyplot as plt
-import mir_eval
+from mir_eval import melody, multipitch
 import numpy as np
 import os
 import seaborn as sns
@@ -22,8 +22,8 @@ class Contours(object):
 
     Attributes
     ----------
-    nums : set
-        Set of contour numbers
+    nums : list
+        Ordered list of contour numbers
     index_mapping : dict
         Mapping from contour number to the indices into times/freqs/salience
         where the contour is active
@@ -73,7 +73,7 @@ class Contours(object):
         self.index = index
         self.times = times
         self.freqs = freqs
-        self.salience = salience / np.max(salience)
+        self.salience = self._set_salience(salience)
         self.sample_rate = sample_rate
         self.audio_filepath = audio_filepath
 
@@ -82,11 +82,11 @@ class Contours(object):
         self.duration = self._compute_duration()
         self.uniform_times = self._compute_uniform_times()
 
-        # computed attributes
-        # self._features = None
-        # self._labels = None
-        # self._overlaps = None
-        # self._scores = None
+    def _set_salience(self, salience):
+        if len(salience) == 0 or np.max(salience) == 0:
+            return salience
+        else:
+            return salience / np.max(salience)
 
     def _compute_nums(self):
         '''Compute the list of contour index numbers
@@ -194,8 +194,8 @@ class Contours(object):
 
         '''
         annot_times, annot_freqs = _load_annotation(annotation_fpath)
-        ref_times, ref_cent, ref_voicing = _format_annotation(
-            annot_times, annot_freqs, self.duration, self.sample_rate
+        ref_cent, ref_voicing = _format_annotation(
+            self.uniform_times, annot_times, annot_freqs
         )
         est_cents, est_voicing = _format_contour_data(self.freqs)
 
@@ -203,66 +203,23 @@ class Contours(object):
         overlaps = dict.fromkeys(self.nums)
 
         for i in self.nums:
-            gt_idx = _get_snippet_idx(self.contour_times(i), ref_times)
-            overlaps[i] = mir_eval.melody.overall_accuracy(
+            gt_idx = _get_snippet_idx(self.contour_times(i), self.uniform_times)
+
+            this_est_cent, this_est_voicing = melody.resample_melody_series(
+                self.contour_times(i), est_cents[self.index_mapping[i]],
+                est_voicing[self.index_mapping[i]], self.uniform_times[gt_idx]
+            )
+
+            overlaps[i] = melody.overall_accuracy(
                 ref_voicing[gt_idx], ref_cent[gt_idx],
-                est_voicing[self.index_mapping[i]],
-                est_cents[self.index_mapping[i]]
+                this_est_voicing,
+                this_est_cent
             )
             labels[i] = 1 * (overlaps[i] > overlap_threshold)
 
         labels = np.array([labels[n] for n in self.nums])
         overlaps = np.array([overlaps[n] for n in self.nums])
         return labels, overlaps
-
-    # def compute_features(self, ctr_ftr):
-    #     '''Compute features for each contour.
-
-    #     Parameters
-    #     ----------
-    #     ctr_ftr : FeatureExtractor
-    #         A FeatureExtractor object.
-
-    #     '''
-    #     self._features = ctr_ftr.compute_all_feautres(self)
-
-    # def compute_scores(self, contour_classifier):
-    #     '''Compute scores using a given classifier.
-
-    #     Parameters
-    #     ----------
-    #     contour_classifier : ContourClassifier
-    #         A trained ContourClassifier object.
-
-    #     '''
-    #     features = self.stack_features()
-    #     labels = contour_classifier.predict(features)
-    #     scores = {n: labels[n] for n in self.nums}
-    #     self._scores = scores
-
-    # def stack_features(self):
-    #     '''Stack features into numpy array.
-
-    #     Returns
-    #     -------
-    #     X : np.array [n_contours, n_features]
-    #         Array of stacked features.
-
-    #     '''
-    #     if self._features is None:
-    #         raise ReferenceError("Features have not yet been computed.")
-    #     return np.array([self._features[n] for n in self.nums])
-
-    # def stack_labels(self, labels):
-    #     '''Stack labels into numpy array.
-
-    #     Returns
-    #     -------
-    #     Y : np.array [n_contours, 1]
-    #         Array of stacked labels.
-
-    #     '''
-    #     return np.array([self.labels[n] for n in self.nums])
 
     def to_multif0_format(self):
         '''Convert contours to multi-f0 format.
@@ -275,14 +232,16 @@ class Contours(object):
             Each row has the form [time, freq1, freq2, ...]
             Each row may have any number of frequencies.
         '''
-        freqs = [[] for i in range(len(self.uniform_times))]
+        n_uniform_times = len(self.uniform_times)
+        freqs = [[] for i in range(n_uniform_times)]
+
         time_idx = np.round(self.times * self.sample_rate).astype(int)
+        time_idx[time_idx >= n_uniform_times] = n_uniform_times - 1
         for i, freq in zip(time_idx, self.freqs):
             freqs[i].append(freq)
         freqs = [np.array(f).astype(float) for f in freqs]
 
         return self.uniform_times, freqs
-
 
     def coverage(self, annotation_fpath, single_f0=True):
         """ Compute how much the set of contours covers the annotation
@@ -293,7 +252,7 @@ class Contours(object):
             Path to annotation file.
         single_f0 : bool
             True for a file containing a single pitch per time stamp
-            False for a file containing possibly multiple pitches per time stamp
+            False for a file containing possibly multiple pitches / time stamp
 
         Returns
         -------
@@ -306,14 +265,44 @@ class Contours(object):
             ref_times, ref_freqs = _load_annotation(
                 annotation_fpath, n_freqs=1, to_array=False
             )
+            ref_freqs = [f if f[0] != 0 else np.array([]) for f in ref_freqs]
+
         else:
             ref_times, ref_freqs = _load_annotation(
                 annotation_fpath, n_freqs=None, to_array=False
             )
-        scores = mir_eval.multipitch.evaluate(
+
+        scores = multipitch.evaluate(
             ref_times, ref_freqs, est_times, est_freqs
         )
         return scores
+
+    def plot_with_annotation(self, annotation_fpath, single_f0=True):
+        if single_f0:
+            ref_times, ref_freqs = _load_annotation(
+                annotation_fpath, n_freqs=1, to_array=False
+            )
+            ref_freqs = [f if f[0] != 0 else np.array([]) for f in ref_freqs]
+
+        else:
+            ref_times, ref_freqs = _load_annotation(
+                annotation_fpath, n_freqs=None, to_array=False
+            )
+
+        r_times = []
+        r_freqs = []
+        for t, freq in zip(ref_times, ref_freqs):
+            r_times.extend([t for f in freq])
+            r_freqs.extend([f for f in freq])
+
+        c1 = sns.color_palette('deep', 1)[0]
+        plt.semilogy(
+            np.array(r_times), np.array(r_freqs), 'ok', basey=2, markersize=5
+        )
+        for i in self.nums:
+            plt.semilogy(self.contour_times(i), self.contour_freqs(i),
+                         basey=2, markersize=2)
+        # plt.show()
 
     def plot(self, style='contour'):
         '''Plot the contours.
@@ -342,6 +331,7 @@ class Contours(object):
         plt.xlabel('Time (sec)')
         plt.ylabel('Frequency (Hz)')
         plt.axis('tight')
+        # plt.show()
 
     def save_contours_subset(self, output_fpath, output_nums):
         '''Save extracted contours where score >= threshold to a csv file.
@@ -352,11 +342,8 @@ class Contours(object):
             Path to save output csv file.
         output_nums : list
             List of contour numbers to save
-        threshold : float
-            Minimum score to be considered part of the target class.
 
         '''
-        # nums_target = [n for n in self.nums if self._scores[n] >= threshold]
         target_indices = []
         for num in output_nums:
             target_indices.extend(self.index_mapping[num])
@@ -369,7 +356,6 @@ class Contours(object):
                 self.freqs[target_indices],
                 self.salience[target_indices]
             ))
-
 
     def save(self, output_fpath):
         '''Save extracted contours to a csv file.
@@ -433,47 +419,40 @@ def _format_contour_data(frequencies):
         Contour voicings
 
     """
-    est_freqs, est_voicing = mir_eval.melody.freq_to_voicing(frequencies)
-    est_cents = mir_eval.melody.hz2cents(est_freqs, 10.)
+    est_freqs, est_voicing = melody.freq_to_voicing(frequencies)
+    est_cents = melody.hz2cents(est_freqs)
     return est_cents, est_voicing
 
 
-def _format_annotation(annot_times, annot_freqs, duration, sample_rate):
+def _format_annotation(new_times, annot_times, annot_freqs):
     """ Format an annotation file and resample to a uniform timebase.
 
     Parameters
     ----------
+    new_times : np.array
+        Times to resample to
     annot_times : np.array
         Annotation time stamps
     annot_freqs : np.array
         Annotation frequency values
-    duration : float
-        Length of the full audio file in seconds.
-    sample_rate : float
-        The target sample rate.
 
     Returns
     -------
-    annot_times_new : np.array
-        New annotation time stamps
+
     ref_cent : np.array
         Annotation frequencies in cents at the new timescale
     ref_voicing : np.array
         Annotation voicings at the new timescale
 
     """
-    annot_times_new = np.arange(
-        0, duration + 0.5 / sample_rate, 1.0 / sample_rate
-    )
+    ref_freq, ref_voicing = melody.freq_to_voicing(annot_freqs)
+    ref_cent = melody.hz2cents(ref_freq)
 
-    ref_freq, ref_voicing = mir_eval.melody.freq_to_voicing(annot_freqs)
-    ref_cent = mir_eval.melody.hz2cents(ref_freq, 10.)
-
-    ref_cent, ref_voicing = mir_eval.melody.resample_melody_series(
-        annot_times, ref_cent, ref_voicing, annot_times_new,
+    ref_cent, ref_voicing = melody.resample_melody_series(
+        annot_times, ref_cent, ref_voicing, new_times,
         kind='linear'
     )
-    return annot_times_new, ref_cent, ref_voicing
+    return ref_cent, ref_voicing
 
 
 def _get_snippet_idx(snippet, full_array):
@@ -571,16 +550,27 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
     precomputed contour file and if successful will load it directly.
     """
     def __init__(self):
-        self.audio_samplerate = 44100
         self.audio_channels = 1
         self.audio_bitdepth = 32
         self.audio_db_level = -3.0
+
+    @property
+    def audio_samplerate(self):
+        """Property to get the sample rate of the output contours"""
+        raise NotImplementedError("This property must return the sample rate "
+                                  "of the output contours.")
 
     @property
     def sample_rate(self):
         """Property to get the sample rate of the output contours"""
         raise NotImplementedError("This property must return the sample rate "
                                   "of the output contours.")
+
+    @property
+    def min_contour_len(self):
+        """Property to get the minimum length of a contour in seconds"""
+        raise NotImplementedError("This property must return the minimum "
+                                  "contour length in seconds.")
 
     @classmethod
     def get_id(cls):
@@ -630,11 +620,40 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
 
         return output_path
 
-
-    def _postprocess_contours(self):
+    def _postprocess_contours(self, index, times, freqs, salience):
         """Remove contours that are too short.
+
+        Parameters
+        ----------
+        index : array
+            array of contour numbers
+        times : array
+            array of contour times
+        freqs : array
+            array of contour frequencies
+        salience : array
+            array of contour salience values
+
+        Returns
+        -------
+        index_pruned : array
+            Pruned array of contour numbers
+        times_pruned : array
+            Pruned array of contour times
+        freqs_pruned : array
+            Pruned array of contour frequencies
+        salience_pruned : array
+            Pruned array of contour salience values
+
         """
-        raise NotImplementedError
+        keep_index = np.ones(times.shape).astype(bool)
+        for i in set(index):
+            this_idx = (index == i)
+            if np.ptp(times[this_idx]) <= self.min_contour_len:
+                keep_index[this_idx] = False
+
+        return (index[keep_index], times[keep_index],
+                freqs[keep_index], salience[keep_index])
 
 
 ###############################################################################
@@ -699,7 +718,6 @@ class FeatureExtractor(six.with_metaclass(MetaFeatureExtractor)):
 
         """
         features = []
-
         for i in ctr.nums:
             feature_vector = self.get_feature_vector(
                 ctr.contour_times(i),
@@ -788,8 +806,8 @@ class ContourClassifier(six.with_metaclass(MetaContourClassifier)):
          scores['recall'],
          scores['f1'],
          scores['support']) = metrics.precision_recall_fscore_support(
-            y_target, y_predicted
-        )
+             y_target, y_predicted
+         )
         scores['confusion matrix'] = metrics.confusion_matrix(
             y_target, y_predicted, labels=[0, 1]
         )
@@ -817,6 +835,8 @@ class ContourDecoder(six.with_metaclass(MetaContourDecoder)):
     """This class is an interface for all the contour decoder algorithms
     included in motif. Each decoder must inherit from it and implement the
     following methods:
+        - decode(ctr, Y)
+        - get_id()
 
     """
     def __init__(self):
@@ -832,8 +852,6 @@ class ContourDecoder(six.with_metaclass(MetaContourDecoder)):
         Y : np.array [n_contours]
             Predicted contour scores.
 
-        Returns
-        -------
         """
         raise NotImplementedError("This method must contain the actual "
                                   "implementation of the decoder.")

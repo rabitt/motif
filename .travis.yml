@@ -9,6 +9,8 @@ cache:
 notifications:
   email: false
 
+# sudo: required
+
 python:
   - "2.7"
   - "3.4"
@@ -20,6 +22,7 @@ addons:
     - sox
 
 before_install:
+    # - sudo cp motif/contour_extractors/resources/hll /usr/local/bin/
     - bash .travis_dependencies.sh
     - export PATH="$HOME/env/miniconda$TRAVIS_PYTHON_VERSION/bin:$PATH";
     - hash -r

@@ -27,9 +27,19 @@ class TestSalamon(unittest.TestCase):
     def setUp(self):
         self.etr = salamon.Salamon()
 
+    def test_audio_sample_rate(self):
+        expected = 44100.0
+        actual = self.etr.audio_samplerate
+        self.assertEqual(expected, actual)
+
     def test_sample_rate(self):
-        expected = 128.0/44100.0
+        expected = 344.53125
         actual = self.etr.sample_rate
+        self.assertEqual(expected, actual)
+
+    def test_min_contour_len(self):
+        expected = 0.0
+        actual = self.etr.min_contour_len
         self.assertEqual(expected, actual)
 
     def test_get_id(self):

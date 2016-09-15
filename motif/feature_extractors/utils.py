@@ -271,7 +271,11 @@ def _fit_normalized_cosine(x, y, min_freq, max_freq, step):
         y
     )
     dot_prod_mag = np.abs(dot_prod)
+
     peak_idx = list(scipy.signal.argrelmax(dot_prod_mag)[0])
+    if len(peak_idx) == 0:
+        return 0, 0
+
     idx = peak_idx[np.argmax(dot_prod_mag[peak_idx])]
     freq = freqs[idx]
     phase = np.angle(dot_prod[idx])
@@ -378,10 +382,9 @@ def get_contour_shape_features(times, freqs, sample_rate, poly_degree=5,
     poly_coeffs, y_poly, y_diff = _fit_poly(
         poly_degree, freqs, grid=times
     )
-
     # remove amplitude envelope using hilbert transform
-    y_hilbert = scipy.signal.hilbert(y_diff)
-    y_sin = y_diff / np.abs(y_hilbert)
+    y_hilbert = np.abs(scipy.signal.hilbert(y_diff))
+    y_sin = y_diff / y_hilbert
 
     # get ideal vibrato parameters from resulting signal
     vib_freq, vib_phase = _fit_normalized_cosine(
@@ -393,17 +396,20 @@ def get_contour_shape_features(times, freqs, sample_rate, poly_degree=5,
     y_sinfit_diff = np.abs(y_sin - y_sinfit)
 
     # compute vibrato coverage
-    cycle_length = 0.5 * ((sample_rate) / vib_freq)
-    coverage = _compute_coverage_array(
-        y_sinfit_diff, cycle_length, vibrato_threshold
-    )
+    if vib_freq > 0:
+        cycle_length = 0.5 * ((sample_rate) / vib_freq)
+        coverage = _compute_coverage_array(
+            y_sinfit_diff, cycle_length, vibrato_threshold
+        )
+    else:
+        coverage = np.zeros((n_points, )).astype(bool)
 
     # compute percentage of coverage
     vib_coverage = coverage.mean()
 
     # if vibrato is present, set extent and rate. Otherwise they are zero.
     if vib_coverage > 0:
-        vib_extent = np.mean(np.abs(y_hilbert)[coverage])
+        vib_extent = np.mean(y_hilbert[coverage])
         vib_rate = vib_freq
     else:
         vib_extent = 0.0
@@ -415,8 +421,8 @@ def get_contour_shape_features(times, freqs, sample_rate, poly_degree=5,
     y_modelfit = y_vib + y_poly
 
     # compute residuals
-    polyfit_residual = np.linalg.norm(y_diff)/float(n_points)
-    modelfit_residual = np.linalg.norm(freqs - y_modelfit)/float(n_points)
+    polyfit_residual = np.linalg.norm(y_diff) / float(n_points)
+    modelfit_residual = np.linalg.norm(freqs - y_modelfit) / float(n_points)
 
     # aggregate features
     thirds = int(np.round(n_points / 3.0))

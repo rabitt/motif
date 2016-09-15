@@ -1,4 +1,4 @@
-"""Import each extractor type.
+"""Import each ContourExtractor.
 """
 from .hll import HLL
 from .salamon import Salamon

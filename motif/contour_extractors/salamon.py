@@ -20,6 +20,7 @@ def _check_binary():
     Returns
     -------
     True if callable, False otherwise
+
     '''
     sonic_annotator_exists = True
     try:
@@ -41,22 +42,61 @@ BINARY_AVAILABLE = _check_binary()
 
 
 class Salamon(ContourExtractor):
+    '''Salamon's method for extracting contours
+    '''
+
+    @property
+    def audio_samplerate(self):
+        """Sample rate of preprocessed audio.
+
+        Returns
+        -------
+        audio_samplerate : float
+            Number of samples per second.
+
+        """
+        return 44100.0
 
     @property
     def sample_rate(self):
-        return 128.0/44100.0
+        """Sample rate of output contours
+
+        Returns
+        -------
+        sample_rate : float
+            Number of samples per second.
+
+        """
+        return 44100.0 / 128.0
+
+    @property
+    def min_contour_len(self):
+        """Minimum allowed contour length.
+
+        Returns
+        -------
+        min_contour_len : float
+            Minimum allowed contour length in seconds.
+
+        """
+        return 0.0
 
     @classmethod
     def get_id(cls):
-        """Identifier of this extractor."""
+        """Identifier of this extractor.
+
+        Returns
+        -------
+        id : str
+            Identifier of this extractor.
+
+        """
         return "salamon"
 
     def compute_contours(self, audio_filepath):
         """Compute contours as in Justin Salamon's melodia.
         This calls a vamp plugin in the background, which creates a csv file.
-        The csv file is loaded into memory and the file is deleted, unless
-        clean=False. When recompute=False, this will first look for an existing
-        precomputed contour file and if successful will load it directly.
+        The csv file is loaded into memory and the file is deleted.
 
         Parameters
         ----------

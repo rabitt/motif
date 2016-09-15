@@ -1,4 +1,4 @@
-"""Import each feature type.
+"""Import each FeatureExtractor.
 """
 from .bitteli import BitteliFeatures
 from .cesium import CesiumFeatures
