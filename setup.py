@@ -5,7 +5,7 @@ if __name__ == "__main__":
     setup(
         name='motif',
 
-        version='0.0.1',
+        version='1.0.0',
 
         description='Melody object transcription framework',
 
