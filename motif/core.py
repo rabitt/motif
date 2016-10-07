@@ -2,17 +2,13 @@
 """ Core methods and base class definitions
 """
 import csv
-import matplotlib.pyplot as plt
 from mir_eval import melody, multipitch
 import numpy as np
 import os
-import seaborn as sns
 import six
 from sklearn import metrics
 import sox
 import tempfile as tmp
-
-sns.set()
 
 
 ###############################################################################
@@ -215,7 +211,7 @@ class Contours(object):
                 this_est_voicing,
                 this_est_cent
             )
-            labels[i] = 1 * (overlaps[i] > overlap_threshold)
+            labels[i] = int(overlaps[i] > overlap_threshold)
 
         labels = np.array([labels[n] for n in self.nums])
         overlaps = np.array([overlaps[n] for n in self.nums])
@@ -276,62 +272,6 @@ class Contours(object):
             ref_times, ref_freqs, est_times, est_freqs
         )
         return scores
-
-    def plot_with_annotation(self, annotation_fpath, single_f0=True):
-        if single_f0:
-            ref_times, ref_freqs = _load_annotation(
-                annotation_fpath, n_freqs=1, to_array=False
-            )
-            ref_freqs = [f if f[0] != 0 else np.array([]) for f in ref_freqs]
-
-        else:
-            ref_times, ref_freqs = _load_annotation(
-                annotation_fpath, n_freqs=None, to_array=False
-            )
-
-        r_times = []
-        r_freqs = []
-        for t, freq in zip(ref_times, ref_freqs):
-            r_times.extend([t for f in freq])
-            r_freqs.extend([f for f in freq])
-
-        c1 = sns.color_palette('deep', 1)[0]
-        plt.semilogy(
-            np.array(r_times), np.array(r_freqs), 'ok', basey=2, markersize=5
-        )
-        for i in self.nums:
-            plt.semilogy(self.contour_times(i), self.contour_freqs(i),
-                         basey=2, markersize=2)
-        # plt.show()
-
-    def plot(self, style='contour'):
-        '''Plot the contours.
-
-        Parameters
-        ----------
-        style : str
-            One of:
-                - 'contour': plot each extracted contour, where each contour
-                    gets its own color.
-                - 'salience': plot the contours where the colors denote the
-                    salience.
-
-        '''
-        if style == 'contour':
-            for i in self.nums:
-                plt.plot(self.contour_times(i), self.contour_freqs(i))
-        elif style == 'salience':
-            plt.scatter(
-                self.times, self.freqs,
-                c=(self.salience / np.max(self.salience)), cmap='BuGn',
-                edgecolors='face', marker='.'
-            )
-            plt.colorbar()
-
-        plt.xlabel('Time (sec)')
-        plt.ylabel('Frequency (Hz)')
-        plt.axis('tight')
-        # plt.show()
 
     def save_contours_subset(self, output_fpath, output_nums):
         '''Save extracted contours where score >= threshold to a csv file.

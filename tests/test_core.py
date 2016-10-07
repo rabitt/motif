@@ -4,7 +4,6 @@ import unittest
 import csv
 import os
 import numpy as np
-from mock import patch
 
 from motif import core
 
@@ -191,18 +190,6 @@ class TestContours(unittest.TestCase):
         }
         for k in expected.keys():
             self.assertEqual(expected[k], actual[k])
-
-    @unittest.skip("Plotting is failing on remote.")
-    @patch("matplotlib.pyplot.show")
-    def test_plot_contour(self, mock_show):
-        mock_show.return_value = None
-        self.ctr.plot(style='contour')
-
-    @unittest.skip("Plotting is failing on remote.")
-    @patch("matplotlib.pyplot.show")
-    def test_plot_salience(self, mock_show):
-        mock_show.return_value = None
-        self.ctr.plot(style='salience')
 
     def test_save_contours_subset(self):
         scores = {0: 0.6, 1: 0.2, 2: 0.9}
