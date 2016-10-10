@@ -52,10 +52,10 @@ class TestMvGaussian(unittest.TestCase):
         X = np.array([[1.0, 2.0], [1.0, 2.0], [0.5, 0.7]])
         Y = np.array([1, 1, 0])
         self.clf.fit(X, Y)
-        actual = self.clf.predict(
-            np.array([[1.0, 2.0], [1.0, 2.0], [0.5, 0.7]])
-        )
+        actual = self.clf.predict(X)
         expected = np.array([np.inf, np.inf, 2.71818876])
+        print(actual)
+        print(expected)
         self.assertTrue(array_equal(expected, actual))
 
     def test_threshold(self):
@@ -81,8 +81,6 @@ class TestMvGaussian(unittest.TestCase):
             'confusion matrix': np.array([[2, 0], [0, 3]]),
             'auc score': 1.0
         }
-        print(predicted_scores)
-        print(y_target)
         actual = self.clf.score(predicted_scores, y_target)
         self.assertEqual(expected['accuracy'], actual['accuracy'])
         self.assertAlmostEqual(expected['mcc'], actual['mcc'], places=1)
