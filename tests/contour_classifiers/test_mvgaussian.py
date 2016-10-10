@@ -53,7 +53,7 @@ class TestMvGaussian(unittest.TestCase):
         Y = np.array([1, 1, 0])
         self.clf.fit(X, Y)
         actual = self.clf.predict(X)
-        expected = np.array([np.inf, np.inf, 2.71818876])
+        expected = np.array([10000.0, 10000.0, 2.71818876])
         print(actual)
         print(expected)
         self.assertTrue(array_equal(expected, actual))
@@ -69,7 +69,7 @@ class TestMvGaussian(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_score(self):
-        predicted_scores = np.array([0.0, 0.5, np.inf, 1.0, 2.0])
+        predicted_scores = np.array([0.0, 0.5, 10000.0, 1.0, 2.0])
         y_target = np.array([0, 0, 1, 1, 1])
         expected = {
             'accuracy': 1.0,
