@@ -36,6 +36,22 @@ class TestProcess(unittest.TestCase):
         )
 
 
+class TestGetModule(unittest.TestCase):
+
+    def test_none(self):
+        actual = run.get_module(None, core.CONTOUR_CLASSIFIER_REGISTRY)
+        expected = None
+        self.assertEqual(expected, actual)
+
+    def test_existing_module(self):
+        mdl = run.get_module('bitteli', core.FEATURE_EXTRACTOR_REGISTRY)
+        self.assertEqual('bitteli', mdl.get_id())
+
+    def test_nonexisting_module(self):
+        with self.assertRaises(RuntimeError):
+            run.get_module('asdf', core.CONTOUR_EXTRACTOR_REGISTRY)
+
+
 class TestGetExtractModule(unittest.TestCase):
 
     def test_hll(self):

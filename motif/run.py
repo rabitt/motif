@@ -10,6 +10,7 @@ from .core import CONTOUR_CLASSIFIER_REGISTRY
 def process(audio_files=None, training_pairs=None, testing_pairs=None,
             extract_id='salamon', feature_id='bitteli',
             classifier_id='random_forest'):
+
     contour_extractor = get_extract_module(extract_id)
     feature_extractor = get_features_module(feature_id)
     contour_classifier = get_classify_module(classifier_id)
@@ -77,7 +78,6 @@ def process_with_labels(contour_extractor, feature_extractor, file_pairs):
     labels_list = []
 
     for audio_filepath, annotation in file_pairs:
-        print(audio_filepath)
         ctr = contour_extractor.compute_contours(audio_filepath)
         Y_train, _ = ctr.compute_labels(annotation)
         X_train = feature_extractor.compute_all(ctr)
@@ -90,6 +90,32 @@ def process_with_labels(contour_extractor, feature_extractor, file_pairs):
     Y = np.concatenate(labels_list)
 
     return X, Y, contour_list
+
+
+def get_module(module_id, module_registry):
+    """Obtains a configured ContourFeatures given an algorithm identificator.
+
+    Parameters
+    ----------
+    module_id : str
+        Module identificator (e.g., bitteli, melodia).
+    module_registry : dict
+        Dictionary of module_ids to class instances
+
+    Returns
+    -------
+    module : object
+        Object containing the selected module.
+        None if no module is needed.
+    """
+    if module_id is None:
+        return None
+    try:
+        module = module_registry[module_id]()
+    except KeyError:
+        raise RuntimeError("Algorithm %s can not be found in motif!" %
+                           module_id)
+    return module
 
 
 def get_extract_module(extract_id):
@@ -106,14 +132,7 @@ def get_extract_module(extract_id):
         Object containing the selected ContourExtractor module.
         None if no extract module is needed.
     """
-    if extract_id is None:
-        return None
-    try:
-        module = CONTOUR_EXTRACTOR_REGISTRY[extract_id]()
-    except AttributeError:
-        raise RuntimeError("Algorithm %s can not be found in motif!" %
-                           extract_id)
-    return module
+    return get_module(extract_id, CONTOUR_EXTRACTOR_REGISTRY)
 
 
 def get_features_module(feature_id):
@@ -130,14 +149,7 @@ def get_features_module(feature_id):
         Object containing the selected ContourFeatures module.
         None if no extract module is needed.
     """
-    if feature_id is None:
-        return None
-    try:
-        module = FEATURE_EXTRACTOR_REGISTRY[feature_id]()
-    except AttributeError:
-        raise RuntimeError("Algorithm %s can not be found in motif!" %
-                           feature_id)
-    return module
+    return get_module(feature_id, FEATURE_EXTRACTOR_REGISTRY)
 
 
 def get_classify_module(classifier_id):
@@ -154,11 +166,4 @@ def get_classify_module(classifier_id):
         Object containing the selected Classifier module.
         None if no extract module is needed.
     """
-    if classifier_id is None:
-        return None
-    try:
-        module = CONTOUR_CLASSIFIER_REGISTRY[classifier_id]()
-    except AttributeError:
-        raise RuntimeError("Algorithm %s can not be found in motif!" %
-                           classifier_id)
-    return module
+    return get_module(classifier_id, CONTOUR_CLASSIFIER_REGISTRY)
