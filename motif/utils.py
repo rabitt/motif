@@ -7,7 +7,7 @@ import numpy as np
 import os
 
 
-def _validate_contours(index, times, freqs, salience):
+def validate_contours(index, times, freqs, salience):
     '''Check that contour input is well formed.
 
     Parameters
@@ -34,7 +34,7 @@ def _validate_contours(index, times, freqs, salience):
         )
 
 
-def _format_contour_data(frequencies):
+def format_contour_data(frequencies):
     """ Convert contour frequencies to cents + voicing.
 
     Parameters
@@ -55,7 +55,7 @@ def _format_contour_data(frequencies):
     return est_cents, est_voicing
 
 
-def _format_annotation(new_times, annot_times, annot_freqs):
+def format_annotation(new_times, annot_times, annot_freqs):
     """ Format an annotation file and resample to a uniform timebase.
 
     Parameters
@@ -86,7 +86,7 @@ def _format_annotation(new_times, annot_times, annot_freqs):
     return ref_cent, ref_voicing
 
 
-def _get_snippet_idx(snippet, full_array):
+def get_snippet_idx(snippet, full_array):
     """ Find the indices of ``full_array`` where ``snippet`` is present.
     Assumes both ``snippet`` and ``full_array`` are ordered.
 
@@ -110,7 +110,7 @@ def _get_snippet_idx(snippet, full_array):
     return idx
 
 
-def _load_annotation(annotation_fpath, n_freqs=1, to_array=True):
+def load_annotation(annotation_fpath, n_freqs=1, to_array=True):
     """ Load an annotation from a csv file.
 
     Parameters

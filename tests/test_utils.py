@@ -22,19 +22,19 @@ class TestValidateContours(unittest.TestCase):
 
     def test_valid(self):
         expected = None
-        actual = utils._validate_contours([0], [0], [0], [0])
+        actual = utils.validate_contours([0], [0], [0], [0])
         self.assertEqual(expected, actual)
 
     def test_invalid(self):
         with self.assertRaises(ValueError):
-            acutal = utils._validate_contours([0], [0], [0], [0, 1])
+            acutal = utils.validate_contours([0], [0], [0], [0, 1])
 
 
 class TestFormatContourData(unittest.TestCase):
 
     def test_format_contour_data(self):
         frequencies = np.array([440.0, 0.0, -440.0, 0.0])
-        actual_cents, actual_voicing = utils._format_contour_data(frequencies)
+        actual_cents, actual_voicing = utils.format_contour_data(frequencies)
         expected_cents = np.array([6551.31794236, 0.0, 6551.31794236, 0.0])
         expected_voicing = np.array([True, False, False, False])
         self.assertTrue(array_equal(expected_cents, actual_cents))
@@ -47,7 +47,7 @@ class TestFormatAnnotation(unittest.TestCase):
         new_times = np.array([0.0, 0.5, 1.0, 1.5, 2.0])
         times = np.array([0.0, 1.0, 2.0])
         freqs = np.array([50.0, 60.0, 70.0])
-        actual_cent, actual_voicing = utils._format_annotation(
+        actual_cent, actual_voicing = utils.format_annotation(
             new_times, times, freqs
         )
         expected_cent = np.array([
@@ -63,7 +63,7 @@ class TestFormatAnnotation(unittest.TestCase):
         new_times = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
         times = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
         freqs = np.array([50.0, 60.0, 70.0, 0.0, 0.0, 0.0])
-        actual_cent, actual_voicing = utils._format_annotation(
+        actual_cent, actual_voicing = utils.format_annotation(
             new_times, times, freqs
         )
         expected_cent = np.array([
@@ -82,7 +82,7 @@ class TestGetSnippetIdx(unittest.TestCase):
         snippet = np.array([2.0, 3.2, 4.4])
         full_array = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
         expected = np.array([False, False, True, True, True, False])
-        actual = utils._get_snippet_idx(snippet, full_array)
+        actual = utils.get_snippet_idx(snippet, full_array)
         self.assertTrue(array_equal(expected, actual))
 
 
@@ -91,7 +91,7 @@ class TestLoadAnnotation(unittest.TestCase):
     def test_load_annotation(self):
         expected_times = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
         expected_freqs = np.array([440.0, 441.0, 55.0, 56.0, 57.0, 200.0])
-        actual_times, actual_freqs = utils._load_annotation(ANNOTATION_FILE)
+        actual_times, actual_freqs = utils.load_annotation(ANNOTATION_FILE)
         self.assertTrue(array_equal(expected_times, actual_times))
         self.assertTrue(array_equal(expected_freqs, actual_freqs))
 
@@ -99,7 +99,7 @@ class TestLoadAnnotation(unittest.TestCase):
         expected_times = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
         expected_freqs = [[440.0], [441.0], [55.0], [56.0], [57.0], [200.0]]
 
-        actual_times, actual_freqs = utils._load_annotation(
+        actual_times, actual_freqs = utils.load_annotation(
             ANNOTATION_FILE, to_array=False
         )
         self.assertTrue(array_equal(expected_times, actual_times))
@@ -107,4 +107,4 @@ class TestLoadAnnotation(unittest.TestCase):
 
     def test_file_not_exists(self):
         with self.assertRaises(IOError):
-            utils._load_annotation('does/not/exist.csv')
+            utils.load_annotation('does/not/exist.csv')

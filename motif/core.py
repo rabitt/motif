@@ -10,8 +10,8 @@ from sklearn import metrics
 import sox
 import tempfile as tmp
 
-from .utils import _validate_contours, _format_contour_data, _format_annotation
-from .utils import _get_snippet_idx, _load_annotation
+from .utils import validate_contours, format_contour_data, format_annotation
+from .utils import get_snippet_idx, load_annotation
 
 
 ###############################################################################
@@ -64,7 +64,7 @@ class Contours(object):
             Path to audio file contours were extracted from
 
         '''
-        _validate_contours(index, times, freqs, salience)
+        validate_contours(index, times, freqs, salience)
         if not os.path.exists(audio_filepath):
             raise IOError("audio_filepath does not exist.")
 
@@ -192,17 +192,17 @@ class Contours(object):
             be labeled as a positive example; between 0 and 1.
 
         '''
-        annot_times, annot_freqs = _load_annotation(annotation_fpath)
-        ref_cent, ref_voicing = _format_annotation(
+        annot_times, annot_freqs = load_annotation(annotation_fpath)
+        ref_cent, ref_voicing = format_annotation(
             self.uniform_times, annot_times, annot_freqs
         )
-        est_cents, est_voicing = _format_contour_data(self.freqs)
+        est_cents, est_voicing = format_contour_data(self.freqs)
 
         labels = dict.fromkeys(self.nums)
         overlaps = dict.fromkeys(self.nums)
 
         for i in self.nums:
-            gt_idx = _get_snippet_idx(self.contour_times(i), self.uniform_times)
+            gt_idx = get_snippet_idx(self.contour_times(i), self.uniform_times)
 
             this_est_cent, this_est_voicing = melody.resample_melody_series(
                 self.contour_times(i), est_cents[self.index_mapping[i]],
@@ -261,13 +261,13 @@ class Contours(object):
         """
         est_times, est_freqs = self.to_multif0_format()
         if single_f0:
-            ref_times, ref_freqs = _load_annotation(
+            ref_times, ref_freqs = load_annotation(
                 annotation_fpath, n_freqs=1, to_array=False
             )
             ref_freqs = [f if f[0] != 0 else np.array([]) for f in ref_freqs]
 
         else:
-            ref_times, ref_freqs = _load_annotation(
+            ref_times, ref_freqs = load_annotation(
                 annotation_fpath, n_freqs=None, to_array=False
             )
 

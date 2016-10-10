@@ -6,7 +6,7 @@ import numpy as np
 import seaborn as sns
 sns.set()
 
-from .core import _load_annotation
+from .utils import load_annotation
 
 
 def plot_with_annotation(ctr, annotation_fpath, single_f0=True):
@@ -25,13 +25,13 @@ def plot_with_annotation(ctr, annotation_fpath, single_f0=True):
 
     '''
     if single_f0:
-        ref_times, ref_freqs = _load_annotation(
+        ref_times, ref_freqs = load_annotation(
             annotation_fpath, n_freqs=1, to_array=False
         )
         ref_freqs = [f if f[0] != 0 else np.array([]) for f in ref_freqs]
 
     else:
-        ref_times, ref_freqs = _load_annotation(
+        ref_times, ref_freqs = load_annotation(
             annotation_fpath, n_freqs=None, to_array=False
         )
 
