@@ -81,6 +81,8 @@ class TestMvGaussian(unittest.TestCase):
             'confusion matrix': np.array([[2, 0], [0, 3]]),
             'auc score': 1.0
         }
+        print(predicted_scores)
+        print(y_target)
         actual = self.clf.score(predicted_scores, y_target)
         self.assertEqual(expected['accuracy'], actual['accuracy'])
         self.assertAlmostEqual(expected['mcc'], actual['mcc'], places=1)

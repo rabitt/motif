@@ -52,7 +52,12 @@ class MvGaussian(ContourClassifier):
         transformed_feats = self._transform(X)
         numerator = self.rv_pos.pdf(transformed_feats)
         denominator = self.rv_neg.pdf(transformed_feats)
-        return numerator / denominator
+        if denominator == 0 and numerator == 0:
+            return 0.0
+        elif denominator == 0:
+            return np.infty
+        else:
+            return numerator / denominator
 
     def fit(self, X, Y):
         """ Fit class-dependent multivariate gaussians on the training set.
