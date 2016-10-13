@@ -74,31 +74,78 @@ class HLL(ContourExtractor):
         HLL tracking update threshold.
 
     '''
-    def __init__(self):
+    def __init__(self, hop_size=8192, n_octaves=6, bins_per_octave=12,
+                 min_note='E1', peak_thresh=0.4, filter_scale=2.0, wait=2,
+                 avg_filt_len=12, pre_max=3, post_max=3, pre_avg=3, post_avg=3,
+                 delta=0.02, n_harmonics=5, f_cutoff=30, tracking_gain=0.0005,
+                 min_contour_len_samples=11025, amplitude_threshold=0.001,
+                 tracking_update_threshold=70.0):
+        ''' Init method.
+
+        Parameters
+        ----------
+        hop_size : int
+            Seed detection CQT hop size.
+        n_cqt_bins : int
+            Number of seed detection CQT bins.
+        bins_per_octave : int
+            Number of seed detection CQT bins per octave.
+        min_note : str
+            Minimum seed detection CQT note.
+        med_filt_len : int
+            Seed detection frequency band median filter length.
+        peak_thresh : float
+            Seed detection peak picking threshold.
+        pre_max : int >= 0
+            Peak-picking num samples before `n` over which max is computed
+        post_max : int >= 1
+            Peak-picking num samples after `n` over which max is computed
+        pre_avg : int >= 0
+            Peak-picking num samples before `n` over which mean is computed
+        post_avg : int >= 1
+            Peak-picking num samples after `n` over which mean is computed
+        delta : float >= 0
+            Peak-picking threshold offset for mean
+        wait : int >= 0
+            Peak-picking number of samples to wait after picking a peak
+        n_harmonics : int
+            Number of HLL harmonics.
+        f_cutoff : float
+            HLL cutoff frequency in Hz.
+        tracking_gain : float
+            HLL tracking gain.
+        min_contour_len_samples : int
+            HLL minimum number of samples in a single contour.
+        amplitude_threshold : float
+            HLL minimum amplitude threshold.
+        tracking_update_threshold : float
+            HLL tracking update threshold.
+
+        '''
         # seed detection parameters
-        self.hop_size = 8192
-        self.n_octaves = 6
-        self.bins_per_octave = 12
-        self.min_note = 'E1'
-        self.peak_thresh = 0.4
-        self.filter_scale = 2.0
-        self.avg_filt_len = 12
+        self.hop_size = hop_size
+        self.n_octaves = n_octaves
+        self.bins_per_octave = bins_per_octave
+        self.min_note = min_note
+        self.peak_thresh = peak_thresh
+        self.filter_scale = filter_scale
+        self.avg_filt_len = avg_filt_len
 
         # librosa peak pick params for seed detection
-        self.pre_max = 3
-        self.post_max = 3
-        self.pre_avg = 3
-        self.post_avg = 3
-        self.delta = 0.02
-        self.wait = 2
+        self.pre_max = pre_max
+        self.post_max = post_max
+        self.pre_avg = pre_avg
+        self.post_avg = post_avg
+        self.delta = delta
+        self.wait = wait
 
         # HLL paramters
-        self.n_harmonics = 5
-        self.f_cutoff = 30  # Hz
-        self.tracking_gain = 0.0005
-        self.min_contour_len_samples = 11025
-        self.amplitude_threshold = 0.001
-        self.tracking_update_threshold = 70.0
+        self.n_harmonics = n_harmonics
+        self.f_cutoff = f_cutoff  # Hz
+        self.tracking_gain = tracking_gain
+        self.min_contour_len_samples = min_contour_len_samples
+        self.amplitude_threshold = amplitude_threshold
+        self.tracking_update_threshold = tracking_update_threshold
 
         ContourExtractor.__init__(self)
 

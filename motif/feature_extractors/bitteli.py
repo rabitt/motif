@@ -25,13 +25,32 @@ class BitteliFeatures(FeatureExtractor):
         Threshold on the average vibrato residual to be considered vibrato.
 
     '''
-    def __init__(self):
-        self.ref_hz = 55.0
-        self.poly_degree = 5
-        self.min_freq = 3
-        self.max_freq = 30
-        self.freq_step = 0.1
-        self.vibrato_threshold = 0.25
+    def __init__(self, ref_hz=55.0, poly_degree=5, min_freq=3, max_freq=30,
+                 freq_step=0.1, vibrato_threshold=0.25):
+        '''Init method
+
+        Parameters
+        ----------
+        ref_hz : float
+            Reference frequency (Hz) for converting to cents.
+        poly_degree : int
+            Polynomial fit degree.
+        min_freq : float
+            Minimum possible vibrato frequency (Hz).
+        max_freq : float
+            Maximum possible vibrato frequency (Hz).
+        freq_step : float
+            Step in Hz between frequencies to search.
+        vibrato_threshold : float
+            Threshold on the average vibrato residual to be considered vibrato.
+
+        '''
+        self.ref_hz = ref_hz
+        self.poly_degree = poly_degree
+        self.min_freq = min_freq
+        self.max_freq = max_freq
+        self.freq_step = freq_step
+        self.vibrato_threshold = vibrato_threshold
         FeatureExtractor.__init__(self)
 
     def get_feature_vector(self, times, freqs_hz, salience, sample_rate):
