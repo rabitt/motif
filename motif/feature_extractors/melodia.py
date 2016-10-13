@@ -15,8 +15,16 @@ class MelodiaFeatures(FeatureExtractor):
         Reference frequency (Hz) for converting to cents.
 
     '''
-    def __init__(self):
-        self.ref_hz = 55.0
+    def __init__(self, ref_hz=55.0):
+        '''Init method
+
+        Parameters
+        ----------
+        ref_hz : float
+            Reference frequency (Hz) for converting to cents.
+
+        '''
+        self.ref_hz = ref_hz
         FeatureExtractor.__init__(self)
 
     def get_feature_vector(self, times, freqs_hz, salience, sample_rate):

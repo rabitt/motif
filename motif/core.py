@@ -2,17 +2,16 @@
 """ Core methods and base class definitions
 """
 import csv
-import matplotlib.pyplot as plt
 from mir_eval import melody, multipitch
 import numpy as np
 import os
-import seaborn as sns
 import six
 from sklearn import metrics
 import sox
 import tempfile as tmp
 
-sns.set()
+from .utils import validate_contours, format_contour_data, format_annotation
+from .utils import get_snippet_idx, load_annotation
 
 
 ###############################################################################
@@ -65,7 +64,7 @@ class Contours(object):
             Path to audio file contours were extracted from
 
         '''
-        _validate_contours(index, times, freqs, salience)
+        validate_contours(index, times, freqs, salience)
         if not os.path.exists(audio_filepath):
             raise IOError("audio_filepath does not exist.")
 
@@ -193,17 +192,17 @@ class Contours(object):
             be labeled as a positive example; between 0 and 1.
 
         '''
-        annot_times, annot_freqs = _load_annotation(annotation_fpath)
-        ref_cent, ref_voicing = _format_annotation(
+        annot_times, annot_freqs = load_annotation(annotation_fpath)
+        ref_cent, ref_voicing = format_annotation(
             self.uniform_times, annot_times, annot_freqs
         )
-        est_cents, est_voicing = _format_contour_data(self.freqs)
+        est_cents, est_voicing = format_contour_data(self.freqs)
 
         labels = dict.fromkeys(self.nums)
         overlaps = dict.fromkeys(self.nums)
 
         for i in self.nums:
-            gt_idx = _get_snippet_idx(self.contour_times(i), self.uniform_times)
+            gt_idx = get_snippet_idx(self.contour_times(i), self.uniform_times)
 
             this_est_cent, this_est_voicing = melody.resample_melody_series(
                 self.contour_times(i), est_cents[self.index_mapping[i]],
@@ -262,13 +261,13 @@ class Contours(object):
         """
         est_times, est_freqs = self.to_multif0_format()
         if single_f0:
-            ref_times, ref_freqs = _load_annotation(
+            ref_times, ref_freqs = load_annotation(
                 annotation_fpath, n_freqs=1, to_array=False
             )
             ref_freqs = [f if f[0] != 0 else np.array([]) for f in ref_freqs]
 
         else:
-            ref_times, ref_freqs = _load_annotation(
+            ref_times, ref_freqs = load_annotation(
                 annotation_fpath, n_freqs=None, to_array=False
             )
 
@@ -276,62 +275,6 @@ class Contours(object):
             ref_times, ref_freqs, est_times, est_freqs
         )
         return scores
-
-    def plot_with_annotation(self, annotation_fpath, single_f0=True):
-        if single_f0:
-            ref_times, ref_freqs = _load_annotation(
-                annotation_fpath, n_freqs=1, to_array=False
-            )
-            ref_freqs = [f if f[0] != 0 else np.array([]) for f in ref_freqs]
-
-        else:
-            ref_times, ref_freqs = _load_annotation(
-                annotation_fpath, n_freqs=None, to_array=False
-            )
-
-        r_times = []
-        r_freqs = []
-        for t, freq in zip(ref_times, ref_freqs):
-            r_times.extend([t for f in freq])
-            r_freqs.extend([f for f in freq])
-
-        c1 = sns.color_palette('deep', 1)[0]
-        plt.semilogy(
-            np.array(r_times), np.array(r_freqs), 'ok', basey=2, markersize=5
-        )
-        for i in self.nums:
-            plt.semilogy(self.contour_times(i), self.contour_freqs(i),
-                         basey=2, markersize=2)
-        # plt.show()
-
-    def plot(self, style='contour'):
-        '''Plot the contours.
-
-        Parameters
-        ----------
-        style : str
-            One of:
-                - 'contour': plot each extracted contour, where each contour
-                    gets its own color.
-                - 'salience': plot the contours where the colors denote the
-                    salience.
-
-        '''
-        if style == 'contour':
-            for i in self.nums:
-                plt.plot(self.contour_times(i), self.contour_freqs(i))
-        elif style == 'salience':
-            plt.scatter(
-                self.times, self.freqs,
-                c=(self.salience / np.max(self.salience)), cmap='BuGn',
-                edgecolors='face', marker='.'
-            )
-            plt.colorbar()
-
-        plt.xlabel('Time (sec)')
-        plt.ylabel('Frequency (Hz)')
-        plt.axis('tight')
-        # plt.show()
 
     def save_contours_subset(self, output_fpath, output_nums):
         '''Save extracted contours where score >= threshold to a csv file.
@@ -374,149 +317,6 @@ class Contours(object):
                 self.freqs,
                 self.salience
             ))
-
-
-def _validate_contours(index, times, freqs, salience):
-    '''Check that contour input is well formed.
-
-    Parameters
-    ----------
-    index : np.array
-        Array of contour numbers
-    times : np.array
-        Array of contour times
-    freqs : np.array
-        Array of contour frequencies
-    salience : np.array
-        Array of contour saliences
-    sample_rate : float
-        Contour sample rate.
-    audio_filepath : str
-        Path to audio file contours were extracted from
-
-    '''
-    N = len(index)
-    if any([len(times) != N, len(freqs) != N, len(salience) != N]):
-        raise ValueError(
-            "the arrays index, times, freqs, and salience "
-            "must be the same length."
-        )
-
-
-def _format_contour_data(frequencies):
-    """ Convert contour frequencies to cents + voicing.
-
-    Parameters
-    ----------
-    frequencies : np.array
-        Contour frequency values
-
-    Returns
-    -------
-    est_cent : np.array
-        Contour frequencies in cents
-    est_voicing : np.array
-        Contour voicings
-
-    """
-    est_freqs, est_voicing = melody.freq_to_voicing(frequencies)
-    est_cents = melody.hz2cents(est_freqs)
-    return est_cents, est_voicing
-
-
-def _format_annotation(new_times, annot_times, annot_freqs):
-    """ Format an annotation file and resample to a uniform timebase.
-
-    Parameters
-    ----------
-    new_times : np.array
-        Times to resample to
-    annot_times : np.array
-        Annotation time stamps
-    annot_freqs : np.array
-        Annotation frequency values
-
-    Returns
-    -------
-
-    ref_cent : np.array
-        Annotation frequencies in cents at the new timescale
-    ref_voicing : np.array
-        Annotation voicings at the new timescale
-
-    """
-    ref_freq, ref_voicing = melody.freq_to_voicing(annot_freqs)
-    ref_cent = melody.hz2cents(ref_freq)
-
-    ref_cent, ref_voicing = melody.resample_melody_series(
-        annot_times, ref_cent, ref_voicing, new_times,
-        kind='linear'
-    )
-    return ref_cent, ref_voicing
-
-
-def _get_snippet_idx(snippet, full_array):
-    """ Find the indices of ``full_array`` where ``snippet`` is present.
-    Assumes both ``snippet`` and ``full_array`` are ordered.
-
-    Parameters
-    ----------
-    snippet : np.array
-        Array of ordered time stamps
-    full_array : np.array
-        Array of ordered time stamps
-
-    Returns
-    -------
-    idx : np.array
-        Array of booleans indicating where in ``full_array`` ``snippet``
-        is present.
-
-    """
-    idx = np.logical_and(
-        full_array >= snippet[0], full_array <= snippet[-1]
-    )
-    return idx
-
-
-def _load_annotation(annotation_fpath, n_freqs=1, to_array=True):
-    """ Load an annotation from a csv file.
-
-    Parameters
-    ----------
-    annotation_fpath : str
-        Path to annotation file.
-    n_freqs : int or None
-        Number of frequencies to read, or None to use max
-    to_array : bool
-        If True, returns annot_freqs as a numpy array
-        If False, returns annot_freqs as a list of lists.
-
-    Returns
-    -------
-    annot_times : array
-        Annotation time stamps
-    annot_freqs : array
-        Annotation frequency values
-
-    """
-    end_idx = None if n_freqs is None else n_freqs + 1
-    if not os.path.exists(annotation_fpath):
-        raise IOError("The annotation path {} does not exist.")
-
-    annot_times = []
-    annot_freqs = []
-    with open(annotation_fpath, 'r') as fhandle:
-        reader = csv.reader(fhandle, delimiter=',')
-        for row in reader:
-            annot_times.append(row[0])
-            annot_freqs.append([r for r in row[1:end_idx]])
-
-    annot_times = np.array(annot_times, dtype=float)
-    annot_freqs = [np.array(f).astype(float) for f in annot_freqs]
-    if to_array:
-        annot_freqs = np.array(annot_freqs, dtype=float).flatten()
-    return annot_times, annot_freqs
 
 
 ###############################################################################

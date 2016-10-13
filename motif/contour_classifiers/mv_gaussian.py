@@ -7,7 +7,7 @@ from scipy.stats import multivariate_normal
 from motif.core import ContourClassifier
 
 EPS = 1.0
-
+MAX_SCORE = 10000.0
 
 class MvGaussian(ContourClassifier):
     '''Multivariate Gaussian contour classifier.
@@ -52,7 +52,17 @@ class MvGaussian(ContourClassifier):
         transformed_feats = self._transform(X)
         numerator = self.rv_pos.pdf(transformed_feats)
         denominator = self.rv_neg.pdf(transformed_feats)
-        return numerator / denominator
+        
+        ratio = np.zeros(numerator.shape)
+        nonzero_denom = np.where(denominator != 0)[0]
+        zero_denom = np.where(denominator == 0)[0]
+        ratio[nonzero_denom] = (
+            numerator[nonzero_denom] / denominator[nonzero_denom]
+        )
+        ratio[zero_denom] = MAX_SCORE
+        ratio[np.where(numerator == 0)[0]] = 0.0
+        ratio[ratio > MAX_SCORE] = MAX_SCORE
+        return ratio
 
     def fit(self, X, Y):
         """ Fit class-dependent multivariate gaussians on the training set.

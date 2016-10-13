@@ -5,7 +5,7 @@ if __name__ == "__main__":
     setup(
         name='motif',
 
-        version='0.0.1',
+        version='1.1.0',
 
         description='Melody object transcription framework',
 
@@ -31,7 +31,7 @@ if __name__ == "__main__":
             'six',
             'numpy >= 1.8.0',
             'scipy >= 0.13.0',
-            'scikit-learn >= 0.14.0',
+            'scikit-learn >= 0.17.0',
             'matplotlib',
             'seaborn',
             'librosa',
