@@ -3,6 +3,5 @@ sox>=1.2
 numpy
 scikit-learn
 mir_eval
-librosa
 seaborn
 scipy
