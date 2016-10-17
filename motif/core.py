@@ -82,6 +82,14 @@ class Contours(object):
         self.uniform_times = self._compute_uniform_times()
 
     def _set_salience(self, salience):
+        '''Set the salience attribute
+
+        Returns
+        -------
+        salience : np.array
+            Normalized salience.
+
+        '''
         if len(salience) == 0 or np.max(salience) == 0:
             return salience
         else:
@@ -277,7 +285,7 @@ class Contours(object):
         return scores
 
     def save_contours_subset(self, output_fpath, output_nums):
-        '''Save extracted contours where score >= threshold to a csv file.
+        '''Save extracted contours where `score >= threshold` to a csv file.
 
         Parameters
         ----------
@@ -337,17 +345,17 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
     """This class is an interface for all the contour extraction algorithms
     included in motif. Each extractor must inherit from it and implement the
     following method:
-            compute_contours()
+        - ``compute_contours``
     Additionally, two private helper functions are provided:
-        - preprocess
-        - postprocess
+        - ``preprocess``
+        - ``postprocess``
     These are meant to do common tasks for all the extractors and they should
     be called inside the process method if needed.
 
     Some methods may call a binary in the background, which creates a csv file.
     The csv file is loaded into memory and the file is deleted, unless
-    clean=False. When recompute=False, this will first look for an existing
-    precomputed contour file and if successful will load it directly.
+    ``clean=False``. When ``recompute=False``, this will first look for an
+    existing precomputed contour file and if successful will load it directly.
     """
     def __init__(self):
         self.audio_channels = 1
@@ -473,12 +481,11 @@ class MetaFeatureExtractor(type):
 class FeatureExtractor(six.with_metaclass(MetaFeatureExtractor)):
     """This class is an interface for all the feature extraction combinations
     included in motif. Each feature set must inherit from it and implement the
-    following method:
-        get_feature_vector(self, times, freqs, salience, duration,
-                           sample_rate)
-            --> This should return a flat numpy array
-        feature_names(self)
-            --> This should return a list of the same length as the above
+    following methods:
+        - ``get_feature_vector``
+            This should return a flat numpy array
+        - ``feature_names``
+            This should return a list of the same length as the above
             numpy array of what each dimension is. Can be as simple as an
             index, can be identfiers such as ['vibrato rate', 'vibrato extent']
     """
@@ -548,12 +555,12 @@ class ContourClassifier(six.with_metaclass(MetaContourClassifier)):
     """This class is an interface for all the contour classifier algorithms
     included in motif. Each classifer must inherit from it and implement the
     following methods:
-        predict(X)
-        fit(X, y)
-        threshold()
-            Should return a float whose determines the positive class threshold
-            (e.g. score >= threshold --> positive class,
-             score < threshold --> negative class)
+        - ``predict``
+        - ``fit``
+        - ``threshold``
+    ``threshold`` should return a float whose determines the positive class
+    threshold (e.g. ``score >= threshold`` : positive class,
+    ``score < threshold`` : negative class)
     """
     def __init__(self):
         pass
@@ -635,8 +642,8 @@ class ContourDecoder(six.with_metaclass(MetaContourDecoder)):
     """This class is an interface for all the contour decoder algorithms
     included in motif. Each decoder must inherit from it and implement the
     following methods:
-        - decode(ctr, Y)
-        - get_id()
+        - ``decode``
+        - ``get_id``
 
     """
     def __init__(self):
