@@ -17,6 +17,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import six
 import sys
 sys.path.insert(0, os.path.abspath('../'))
 
@@ -59,19 +60,22 @@ copyright = u'2016, Rachel Bittner'
 author = u'Rachel Bittner'
 
 # Mock the dependencies
-from mock import MagicMock
+if six.PY3:
+    from unittest.mock import MagicMock
+else:
+    from mock import Mock as MagicMock
 
 
 class Mock(MagicMock):
     @classmethod
     def __getattr__(cls, name):
-        return Mock()
+        return MagicMock()
 
 
 MOCK_MODULES = [
     'librosa', 'sox', 'numpy', 'numpy.polynomial.polynomial',
-    'sklearn', 'mir_eval', 'seaborn',
-    'seaborn', 'scipy'
+    'sklearn', 'sklearn.ensemble', 'sklearn.grid_search', 'sklearn.utils',
+    'mir_eval', 'seaborn', 'scipy', 'scipy.stats'
 ]
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)

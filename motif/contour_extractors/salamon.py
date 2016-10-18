@@ -11,7 +11,7 @@ from motif.core import ContourExtractor
 from motif.core import Contours
 
 OUTPUT_FILE_STRING = "vamp_melodia-contours_melodia-contours_contoursall"
-VAMP_PLUGIN = "vamp:melodia-contours:melodia-contours:contoursall"
+VAMP_PLUGIN = b"vamp:melodia-contours:melodia-contours:contoursall"
 
 
 def _check_binary():
