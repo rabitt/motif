@@ -61,13 +61,15 @@ author = u'Rachel Bittner'
 # Mock the dependencies
 from mock import MagicMock
 
+
 class Mock(MagicMock):
     @classmethod
     def __getattr__(cls, name):
         return Mock()
 
+
 MOCK_MODULES = [
-    'librosa', 'sox', 'numpy',
+    'librosa', 'sox', 'numpy', 'numpy.polynomial.polynomial',
     'sklearn', 'mir_eval', 'seaborn',
     'seaborn', 'scipy'
 ]
