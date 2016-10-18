@@ -1,7 +1,1 @@
 numpydoc>=0.5
-sox>=1.2
-numpy
-scikit-learn
-mir_eval
-seaborn
-scipy
