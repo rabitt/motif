@@ -10,4 +10,4 @@ melodic object transcription framework
 
 Documentation
 =============
-Documentation can be found [here](motif.readthedocs.io).
+Documentation can be found [here](http://motif.readthedocs.io).

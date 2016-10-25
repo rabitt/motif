@@ -74,12 +74,14 @@ class Mock(MagicMock):
 
 
 MOCK_MODULES = [
-    'librosa', 'sox', 'numpy', 'np', 'numpy.polynomial.polynomial', 'Poly',
-    'sklearn', 'sklearn.ensemble', 'sklearn.grid_search', 'sklearn.utils',
-    'mir_eval', 'seaborn', 'scipy', 'scipy.stats', 'matplotlib.pyplot', 'plt'
+    'librosa', 'sox', 'numpy', 'numpy.polynomial',
+    'numpy.polynomial.polynomial', 'sklearn', 'sklearn.ensemble',
+    'sklearn.grid_search', 'sklearn.utils', 'mir_eval', 'seaborn', 'scipy',
+    'scipy.stats', 'matplotlib', 'matplotlib.pyplot'
 ]
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
