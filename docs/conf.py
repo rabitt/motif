@@ -19,6 +19,7 @@
 import os
 import six
 import sys
+sys.path.insert(0, os.path.abspath('./'))
 sys.path.insert(0, os.path.abspath('../'))
 
 # -- General configuration ------------------------------------------------
@@ -73,9 +74,9 @@ class Mock(MagicMock):
 
 
 MOCK_MODULES = [
-    'librosa', 'sox', 'numpy', 'numpy.polynomial.polynomial',
+    'librosa', 'sox', 'numpy', 'np', 'numpy.polynomial.polynomial', 'Poly',
     'sklearn', 'sklearn.ensemble', 'sklearn.grid_search', 'sklearn.utils',
-    'mir_eval', 'seaborn', 'scipy', 'scipy.stats'
+    'mir_eval', 'seaborn', 'scipy', 'scipy.stats', 'matplotlib.pyplot', 'plt'
 ]
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
