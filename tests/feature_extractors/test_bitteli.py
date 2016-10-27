@@ -96,7 +96,7 @@ class TestBitteliFeatures(unittest.TestCase):
             'pitch mean (cents)',
             'pitch stddev (cents)',
             'pitch range (cents)',
-            'pitch total variation',
+            'pitch average variation',
             'salience mean',
             'salience stdev',
             'salience range',

@@ -229,7 +229,9 @@ def _fit_poly(n_poly_degrees, signal, grid=None, norm=False):
             signal = signal / max_val
 
     if grid is None:
-        grid = np.linspace(0, 1, num=n_points)
+        grid = np.linspace(-1, 1, num=n_points)
+    else:
+        grid = grid - np.mean(grid)
 
     poly_coeff = Poly.polyfit(grid, signal, n_poly_degrees)
     poly_approx = Poly.polyval(grid, poly_coeff)
@@ -377,10 +379,11 @@ def get_contour_shape_features(times, freqs, sample_rate, poly_degree=5,
             - overall model fit residual
     '''
     n_points = len(freqs)
+    times_shifted = times - np.mean(times)
 
     # fit contour to a low order polynomial
     poly_coeffs, y_poly, y_diff = _fit_poly(
-        poly_degree, freqs, grid=times
+        poly_degree, freqs, grid=times_shifted
     )
     # remove amplitude envelope using hilbert transform
     y_hilbert = np.abs(scipy.signal.hilbert(y_diff))
@@ -388,9 +391,10 @@ def get_contour_shape_features(times, freqs, sample_rate, poly_degree=5,
 
     # get ideal vibrato parameters from resulting signal
     vib_freq, vib_phase = _fit_normalized_cosine(
-        times, y_sin, min_freq=min_freq, max_freq=max_freq, step=freq_step
+        times_shifted, y_sin, min_freq=min_freq, max_freq=max_freq,
+        step=freq_step
     )
-    y_sinfit = np.cos(2. * np.pi * vib_freq * times - vib_phase)
+    y_sinfit = np.cos(2. * np.pi * vib_freq * times_shifted - vib_phase)
 
     # get residual of sinusoidal fit
     y_sinfit_diff = np.abs(y_sin - y_sinfit)
