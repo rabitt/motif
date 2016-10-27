@@ -32,7 +32,10 @@ def process(audio_files=None, training_pairs=None, testing_pairs=None,
 
         # get testing score
         Y_pred = contour_classifier.predict(X_test)
-        test_scores = contour_classifier.score(Y_pred, Y_test)
+        try:
+            test_scores = contour_classifier.score(Y_pred, Y_test)
+        except ValueError:
+            test_scores = {}
 
     if audio_files is not None:
         contour_list = process_audio_only(

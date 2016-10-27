@@ -103,23 +103,23 @@ class TestGetPolynomialFitFeatures(unittest.TestCase):
         times = np.array([0.0, 1.0])
         signal = np.array([0.0, 1.0])
         actual = utils.get_polynomial_fit_features(times, signal, n_deg=1)
-        expected = np.array([0.0, 1.0, 0.0])
+        expected = np.array([0.5, 1.0, 0.0])
         self.assertTrue(array_equal(expected, actual))
 
     def test_norm(self):
-        times = np.array([0.0, 1.0])
+        times = np.array([-0.5, 0.5])
         signal = np.array([0.5, 0.9])
         actual = utils.get_polynomial_fit_features(
             times, signal, n_deg=1, norm=True
         )
-        expected = np.array([0.0, 1.0, 0.0])
+        expected = np.array([0.5, 1.0, 0.0])
         self.assertTrue(array_equal(expected, actual))
 
 
 class TestFitPoly(unittest.TestCase):
 
     def test_line(self):
-        signal = np.array([0.0, 1.0])
+        signal = np.array([-1.0, 1.0])
         expected_coeffs = np.array([0.0, 1.0])
         expected_diff = 0.0
         expected_approx = signal
@@ -129,10 +129,10 @@ class TestFitPoly(unittest.TestCase):
         self.assertTrue(array_equal(expected_diff, actual_diff))
 
     def test_cubic(self):
-        signal = np.array([0, 1.0 / 27.0, 8.0 / 27.0, 1.0])
+        signal = np.array([-1.0, -0.125, 0.0, 0.125, 1.0])
         expected_coeffs = np.array([0.0, 0.0, 0.0, 1.0])
         expected_diff = 0.0
-        expected_approx = np.power(np.linspace(0, 1, 4), 3)
+        expected_approx = np.power(np.linspace(-1, 1, 5), 3)
         actual_coeffs, actual_approx, actual_diff = utils._fit_poly(3, signal)
         self.assertTrue(array_equal(expected_coeffs, actual_coeffs))
         self.assertTrue(array_equal(expected_approx, actual_approx))
@@ -144,6 +144,19 @@ class TestFitPoly(unittest.TestCase):
         expected_coeffs = np.array([0.0, 0.0, 1.0])
         expected_diff = 0.0
         expected_approx = np.power(grid, 2)
+        actual_coeffs, actual_approx, actual_diff = utils._fit_poly(
+            2, signal, grid=grid
+        )
+        self.assertTrue(array_equal(expected_coeffs, actual_coeffs))
+        self.assertTrue(array_equal(expected_approx, actual_approx))
+        self.assertTrue(array_equal(expected_diff, actual_diff))
+
+    def test_grid_not_centered(self):
+        grid = np.array([0, 1, 2, 3, 4])
+        signal = np.array([4, 1, 0, 1, 4])
+        expected_coeffs = np.array([0.0, 0.0, 1.0])
+        expected_diff = 0.0
+        expected_approx = np.power(grid - 2.0, 2)
         actual_coeffs, actual_approx, actual_diff = utils._fit_poly(
             2, signal, grid=grid
         )
@@ -241,7 +254,7 @@ class TestGetContourShapeFeatures(unittest.TestCase):
 
     def test_line(self):
         sample_rate = 2000
-        times = np.linspace(0, 1, sample_rate)
+        times = np.linspace(-0.5, 0.5, sample_rate)
         freqs = 1.2 * times + 440.0
         expected = np.array([
             0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -253,7 +266,7 @@ class TestGetContourShapeFeatures(unittest.TestCase):
 
     def test_flat_line(self):
         sample_rate = 2000
-        times = np.linspace(0, 1, sample_rate)
+        times = np.linspace(-0.5, 0.5, sample_rate)
         freqs = 0.0 * times + 440.0
         expected = np.array([
             0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -265,7 +278,7 @@ class TestGetContourShapeFeatures(unittest.TestCase):
 
     def test_zeros(self):
         sample_rate = 2000
-        times = np.linspace(0, 1, sample_rate)
+        times = np.linspace(-0.5, 0.5, sample_rate)
         freqs = 0.0 * times
         expected = np.array([
             0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -277,17 +290,19 @@ class TestGetContourShapeFeatures(unittest.TestCase):
 
     def test_line_with_vib(self):
         sample_rate = 2000
-        times = np.linspace(0, 1, sample_rate)
+        times = np.linspace(-0.5, 0.5, sample_rate)
         freqs = (
             (1.2 * times + 440.0) + 7.3 * np.cos(2.0 * np.pi * 12.0 * times)
         )
         expected = np.array([
             12.0, 7.296015, 1.0, 1.0, 1.0, 1.0,
-            4.40586339e+02, -9.14578468e+00,
-            4.45852838e+01, -6.84789982e+01, 3.42394991e+01,
-            1.40143396e-11, 1.15390225e-01, 3.77435044e-03
+            440.139861, 1.2, -6.77396486e+00, 3.49420344e-12,
+            3.42394991e+01, -1.48802985e-11,
+            1.15390225e-01, 3.77435044e-03
         ])
         actual = utils.get_contour_shape_features(times, freqs, sample_rate)
+        print(expected)
+        print(actual)
         self.assertTrue(array_equal(expected, actual))
 
 
