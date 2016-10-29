@@ -254,6 +254,10 @@ class HLL(ContourExtractor):
             contours_fpath
         )
 
+        c_numbers, c_times, c_freqs, c_sal = self._sort_contours(
+            c_numbers, c_times, c_freqs, c_sal
+        )
+
         os.remove(contours_fpath)
         os.remove(tmp_audio)
         os.remove(seed_fpath)
@@ -440,9 +444,4 @@ class HLL(ContourExtractor):
         freqs = np.array(freqs, dtype=float)
         contour_sal = np.array(contour_sal, dtype=float)
 
-        sort_idx = np.lexsort((times, index))
-
-        return (
-            index[sort_idx], times[sort_idx], freqs[sort_idx],
-            contour_sal[sort_idx]
-        )
+        return (index, times, freqs, contour_sal)

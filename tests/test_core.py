@@ -258,7 +258,7 @@ class TestExtractorRegistry(unittest.TestCase):
 
     def test_keys(self):
         actual = sorted(core.CONTOUR_EXTRACTOR_REGISTRY.keys())
-        expected = sorted(['hll', 'salamon', '__test__'])
+        expected = sorted(['hll', 'salamon', 'peak_stream', '__test__'])
         self.assertEqual(expected, actual)
 
     def test_types(self):
@@ -351,6 +351,25 @@ class TestContourExtractor(unittest.TestCase):
         self.assertTrue(array_equal(expected_freqs, actual_freqs))
         self.assertTrue(array_equal(expected_salience, actual_salience))
 
+    def test_sort_contours(self):
+        index = np.array([0, 0, 1, 1, 1, 1])
+        times = np.array([0.0, 1.0, 0.5, 1.5, 2.5, 2.0])
+        frequency = np.array([60.0, 201.0, 60.0, 200.0, 200.0, 200.0])
+        salience = np.array([0.5, 0.8, 0.5, 0.8, 0.8, 0.9])
+
+        (actual_index, actual_times,
+         actual_freqs, actual_salience) = self.cex_test._sort_contours(
+             index, times, frequency, salience)
+
+        expected_index = np.array([0, 0, 1, 1, 1, 1])
+        expected_times = np.array([0.0, 1.0, 0.5, 1.5, 2.0, 2.5])
+        expected_freqs = np.array([60.0, 201.0, 60.0, 200.0, 200.0, 200.0])
+        expected_salience = np.array([0.5, 0.8, 0.5, 0.8, 0.9, 0.8])
+
+        self.assertTrue(array_equal(expected_index, actual_index))
+        self.assertTrue(array_equal(expected_times, actual_times))
+        self.assertTrue(array_equal(expected_freqs, actual_freqs))
+        self.assertTrue(array_equal(expected_salience, actual_salience))
 
 class TestFeaturesRegistry(unittest.TestCase):
 
