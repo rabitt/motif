@@ -433,24 +433,24 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
 
         Parameters
         ----------
-        index : array
+        index : np.array
             array of contour numbers
-        times : array
+        times : np.array
             array of contour times
-        freqs : array
+        freqs : np.array
             array of contour frequencies
-        salience : array
+        salience : np.array
             array of contour salience values
 
         Returns
         -------
-        index_pruned : array
+        index_pruned : np.array
             Pruned array of contour numbers
-        times_pruned : array
+        times_pruned : np.array
             Pruned array of contour times
-        freqs_pruned : array
+        freqs_pruned : np.array
             Pruned array of contour frequencies
-        salience_pruned : array
+        salience_pruned : np.array
             Pruned array of contour salience values
 
         """
@@ -463,6 +463,38 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
         return (index[keep_index], times[keep_index],
                 freqs[keep_index], salience[keep_index])
 
+    def _sort_contours(self, index, times, freqs, salience):
+        """Sort contours by index and time.
+
+        Parameters
+        ----------
+        index : np.array
+            array of contour numbers
+        times : np.array
+            array of contour times
+        freqs : np.array
+            array of contour frequencies
+        salience : np.array
+            array of contour salience values
+
+        Returns
+        -------
+        index_sorted : np.array
+            Pruned array of contour numbers
+        times_sorted : np.array
+            Pruned array of contour times
+        freqs_sorted : np.array
+            Pruned array of contour frequencies
+        salience_sorted : np.array
+            Pruned array of contour salience values
+
+        """
+        sort_idx = np.lexsort((times, index))
+
+        return (
+            index[sort_idx], times[sort_idx], freqs[sort_idx],
+            salience[sort_idx]
+        )
 
 ###############################################################################
 FEATURE_EXTRACTOR_REGISTRY = {}  # All available classifiers

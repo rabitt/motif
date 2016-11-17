@@ -2,4 +2,5 @@
 """
 from .hll import HLL
 from .salamon import Salamon
-__all__ = ['hll', 'salamon']
+from .peak_stream import PeakStream
+__all__ = ['hll', 'peak_stream', 'salamon']
