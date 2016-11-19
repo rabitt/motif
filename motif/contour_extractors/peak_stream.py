@@ -21,33 +21,55 @@ class PeakStream(ContourExtractor):
         melody estimation." 14th International Conference on Digital Audio
         Effects (DAFX11), Paris, France, 2011.
 
+    Parameters
+    ----------
+    hop_length : int, default=128
+        Number of samples between frames.
+    win_length : int, default=2048
+        The window size in samples.
+    n_fft : int, default=8192
+        The fft size in samples.
+    pitch_cont : float, default=80
+        Pitch continuity threshold in cents.
+    max_gap : float, default=0.01
+        Threshold (in seconds) for how many values can be taken from S-.
+    amp_thresh : float, default=0.9
+        Threshold on how big a peak must be relative to the maximum in its
+        frame.
+    dev_thresh : float, default=0.9
+        The maximum number of standard deviations below the mean a peak can
+        be to survive.
+    preprocess : bool, default=True
+        If true, normalizes the volume and format of the audio before
+        processing. Otherwise computes contours from original audio.
+
+    Attributes
+    ----------
+    hop_length : int
+        Number of samples between frames.
+    win_length : int
+        The window size in samples.
+    n_fft : int
+        The fft size in samples.
+    pitch_cont : float
+        Pitch continuity threshold in cents.
+    max_gap : float
+        Threshold (in seconds) for how many values can be taken from S-.
+    amp_thresh : float
+        Threshold on how big a peak must be relative to the maximum in its
+        frame.
+    dev_thresh : float
+        The maximum number of standard deviations below the mean a peak can
+        be to survive.
+    preprocess : bool
+        If true, normalizes the volume and format of the audio before
+        processing. Otherwise computes contours from original audio.
+
     '''
     def __init__(self, hop_length=128, win_length=2048, n_fft=8192,
                  pitch_cont=80, max_gap=0.01, amp_thresh=0.9, dev_thresh=0.9,
                  preprocess=True):
         '''Init method.
-
-        Parameters
-        ----------
-        hop_length : int
-            Number of samples between frames.
-        win_length : int
-            The window size in samples.
-        n_fft : int
-            The fft size in samples.
-        pitch_cont : float
-            Pitch continuity threshold in cents.
-        max_gap : float
-            Threshold (in seconds) for how many values can be taken from S-.
-        amp_thresh : float
-            Threshold on how big a peak must be relative to the maximum in its
-            frame.
-        dev_thresh : float
-            The maximum number of standard deviations below the mean a peak can
-            be to survive.
-        preprocess : bool
-            If true, normalizes the volume and format of the audio before
-            processing. Otherwise computes contours from original audio.
         '''
 
         # salience function parameters

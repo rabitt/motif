@@ -34,6 +34,45 @@ BINARY_AVAILABLE = _check_binary()
 class HLL(ContourExtractor):
     '''HLL method for extracting contours.
 
+    Parameters
+    ----------
+    hop_size : int, default=8192
+        Seed detection CQT hop size.
+    bins_per_octave : int, default=12
+        Number of seed detection CQT bins per octave.
+    min_note : str, default='E1'
+        Minimum seed detection CQT note.
+    peak_thresh : float, default=0.4
+        Seed detection peak picking threshold.
+    filter_scale : float, defualt=2.0
+        CQT filter scale.
+    wait : int >= 0, default=2
+        Peak-picking number of samples to wait after picking a peak.
+    avg_filt_len : int >= 0, default=12
+        Peak-picking average filter length.
+    pre_max : int >= 0, default=3
+        Peak-picking num samples before `n` over which max is computed
+    post_max : int >= 1, default=3
+        Peak-picking num samples after `n` over which max is computed
+    pre_avg : int >= 0, default=3
+        Peak-picking num samples before `n` over which mean is computed
+    post_avg : int >= 1, default=3
+        Peak-picking num samples after `n` over which mean is computed
+    delta : float >= 0, default=0.02
+        Peak-picking threshold offset for mean
+    n_harmonics : int, default=5
+        Number of HLL harmonics.
+    f_cutoff : float, default=30
+        HLL cutoff frequency in Hz.
+    tracking_gain : float, default=0.0005
+        HLL tracking gain.
+    min_contour_len_samples : int, default=11025
+        HLL minimum number of samples in a single contour.
+    amplitude_threshold : float, default=0.001
+        HLL minimum amplitude threshold.
+    tracking_update_threshold : float, default=70.0
+        HLL tracking update threshold.
+
     Attributes
     ----------
     hop_size : int
@@ -81,46 +120,6 @@ class HLL(ContourExtractor):
                  min_contour_len_samples=11025, amplitude_threshold=0.001,
                  tracking_update_threshold=70.0):
         ''' Init method.
-
-        Parameters
-        ----------
-        hop_size : int
-            Seed detection CQT hop size.
-        n_cqt_bins : int
-            Number of seed detection CQT bins.
-        bins_per_octave : int
-            Number of seed detection CQT bins per octave.
-        min_note : str
-            Minimum seed detection CQT note.
-        med_filt_len : int
-            Seed detection frequency band median filter length.
-        peak_thresh : float
-            Seed detection peak picking threshold.
-        pre_max : int >= 0
-            Peak-picking num samples before `n` over which max is computed
-        post_max : int >= 1
-            Peak-picking num samples after `n` over which max is computed
-        pre_avg : int >= 0
-            Peak-picking num samples before `n` over which mean is computed
-        post_avg : int >= 1
-            Peak-picking num samples after `n` over which mean is computed
-        delta : float >= 0
-            Peak-picking threshold offset for mean
-        wait : int >= 0
-            Peak-picking number of samples to wait after picking a peak
-        n_harmonics : int
-            Number of HLL harmonics.
-        f_cutoff : float
-            HLL cutoff frequency in Hz.
-        tracking_gain : float
-            HLL tracking gain.
-        min_contour_len_samples : int
-            HLL minimum number of samples in a single contour.
-        amplitude_threshold : float
-            HLL minimum amplitude threshold.
-        tracking_update_threshold : float
-            HLL tracking update threshold.
-
         '''
         # seed detection parameters
         self.hop_size = hop_size
@@ -297,12 +296,44 @@ class HLL(ContourExtractor):
         return seeds_fpath
 
     def _moving_average(self, a):
+        """Compute the moving average of a signal.
+
+        Parameters
+        ----------
+        a : np.array
+            Signal
+
+        Returns
+        -------
+        a_avg : np.array
+            Moving average of signal.
+
+        """
         n = self.avg_filt_len
         ret = np.cumsum(a, dtype=float)
         ret[n:] = ret[n:] - ret[:-n]
         return ret[n - 1:] / n
 
     def _norm_matrix(self, mat, overall=True, time=True, freq=True):
+        """Normalize a matrix overall, in time, or in frequency.
+
+        Parameters
+        ----------
+        mat : np.array
+            Matrix.
+        overall : bool, default=True
+            If True, normalizes first by the overall amplitudes.
+        time : bool, default=True
+            If True, normalizes in time.
+        freq : bool, default=True
+            If True, normalizes in frequency.
+
+        Returns
+        -------
+        mat_norm : np.array
+            Normalized matrix
+
+        """
         if overall:
             mat = mat - np.min(mat)
             m = np.max(mat)
