@@ -35,6 +35,13 @@ HLL
     :show-inheritance:
     :inherited-members:
 
+Peak Streaming
+--------------
+.. automodule:: motif.contour_extractors.peak_stream
+    :members:
+    :show-inheritance:
+    :inherited-members:
+
 Salamon
 -------
 .. automodule:: motif.contour_extractors.salamon

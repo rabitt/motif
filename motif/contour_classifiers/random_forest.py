@@ -2,7 +2,7 @@
 """
 from __future__ import print_function
 from sklearn.ensemble import RandomForestClassifier as RFC
-from sklearn.grid_search import RandomizedSearchCV
+from sklearn.model_selection import RandomizedSearchCV
 from sklearn.utils import shuffle
 from scipy.stats import randint as sp_randint
 
@@ -33,7 +33,7 @@ class RandomForest(ContourClassifier):
 
     '''
     def __init__(self, n_estimators=50, n_jobs=-1, class_weight='balanced',
-                 n_iter_search=100):
+                 n_iter_search=100, random_state=None):
         '''
         Parameters
         ----------
@@ -43,6 +43,10 @@ class RandomForest(ContourClassifier):
             Number of cores to use. -1 uses maximum availalbe
         class_weight : str
             How to set class weights.
+        n_iter_search : int
+            Number of iterations to search
+        random_state : int or None
+            Optional random seed to reproduce results
 
         '''
         ContourClassifier.__init__(self)
@@ -51,6 +55,7 @@ class RandomForest(ContourClassifier):
         self.n_jobs = n_jobs
         self.class_weight = class_weight
         self.n_iter_search = n_iter_search
+        self.random_state = None
         self.clf = None
 
     def predict(self, X):
@@ -85,9 +90,9 @@ class RandomForest(ContourClassifier):
 
         """
         x_shuffle, y_shuffle = shuffle(X, Y)
-        # self._cross_val_sweep(x_shuffle, y_shuffle)
         clf_cv = RFC(n_estimators=self.n_estimators, n_jobs=self.n_jobs,
-                     class_weight=self.class_weight)
+                     class_weight=self.class_weight,
+                     random_state=self.random_state)
         param_dist = {
             "max_depth": sp_randint(1, 101),
             "max_features": [None, 'auto', 'sqrt', 'log2'],
