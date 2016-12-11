@@ -96,7 +96,7 @@ class RandomForest(ContourClassifier):
         param_dist = {
             "max_depth": sp_randint(1, 101),
             "max_features": [None, 'auto', 'sqrt', 'log2'],
-            "min_samples_split": sp_randint(1, 11),
+            "min_samples_split": sp_randint(2, 11),
             "min_samples_leaf": sp_randint(1, 11),
             "bootstrap": [True, False],
             "criterion": ["gini", "entropy"]

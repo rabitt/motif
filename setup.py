@@ -27,6 +27,8 @@ if __name__ == "__main__":
 
         license='MIT',
 
+        dependency_links=['git+ssh://git@github.com/librosa/librosa.git@0.5.0.dev0#egg=librosa-0.5.0.dev0'],
+
         install_requires=[
             'six',
             'numpy >= 1.8.0',
@@ -34,7 +36,7 @@ if __name__ == "__main__":
             'scikit-learn >= 0.17.0',
             'matplotlib',
             'seaborn',
-            'librosa',
+            'librosa == 0.5.0.dev0',
             'mir_eval >= 0.4.0',
             'sox'
         ],

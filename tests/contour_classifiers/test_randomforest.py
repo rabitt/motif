@@ -15,7 +15,7 @@ class TestRandomForest(unittest.TestCase):
 
     def setUp(self):
         self.clf = random_forest.RandomForest(
-            n_estimators=2, n_iter_search=1, random_state=7
+            n_estimators=2, n_iter_search=1, random_state=6
         )
 
     def test_n_estimators(self):
