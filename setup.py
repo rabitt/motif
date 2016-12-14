@@ -1,11 +1,15 @@
 """ Setup script for sox. """
 from setuptools import setup
 
+import imp
+
+version = imp.load_source('motif.version', 'motif/version.py')
+
 if __name__ == "__main__":
     setup(
         name='motif',
 
-        version='1.1.1',
+        version=version.version,
 
         description='Melody object transcription framework',
 

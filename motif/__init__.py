@@ -11,6 +11,7 @@ from .core import CONTOUR_CLASSIFIER_REGISTRY
 from .core import CONTOUR_DECODER_REGISTRY
 
 from .run import process
+from .version import version as __version__
 
 __all__ = [
     'contour_classifiers',
