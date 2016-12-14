@@ -49,7 +49,7 @@ def plot_with_annotation(ctr, annotation_fpath, single_f0=True):
     # plot contours
     c1 = sns.color_palette('deep', 1)[0]
     for i in ctr.nums:
-        plt.semilogy(ctr.contour_times(i), ctr.contour_freqs(i), c1,
+        plt.semilogy(ctr.contour_times(i), ctr.contour_freqs(i),
                      basey=2, markersize=2)
 
     plt.xlabel('Time (sec)')

@@ -31,6 +31,7 @@ before_install:
 # command to install dependencies
 install:
   - pip install coveralls
+  - pip install git+https://github.com/librosa/librosa.git
   - pip install -e .
   - pip install mock
 
