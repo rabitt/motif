@@ -82,19 +82,18 @@ class BitteliFeatures(FeatureExtractor):
                 freq_step=self.freq_step,
                 vibrato_threshold=self.vibrato_threshold),
             utils.get_polynomial_fit_features(
-                times, salience, n_deg=self.poly_degree, norm=False),
+                times - np.mean(times), salience, n_deg=self.poly_degree,
+                norm=False
+            ),
             utils.get_contour_onset(times),
             utils.get_contour_offset(times),
             utils.get_contour_duration(times),
-            utils.get_mean(freqs_cents),
             utils.get_std(freqs_cents),
             utils.get_range(freqs_cents),
             utils.get_total_variation(freqs_cents)/len(freqs_cents),
-            utils.get_mean(salience),
             utils.get_std(salience),
             utils.get_range(salience),
-            utils.get_sum(salience),
-            utils.get_total_variation(salience)
+            utils.get_total_variation(salience)/len(freqs_cents)
         ]
 
         return np.concatenate(features)
@@ -134,15 +133,12 @@ class BitteliFeatures(FeatureExtractor):
             'onset',
             'offset',
             'duration',
-            'pitch mean (cents)',
             'pitch stddev (cents)',
             'pitch range (cents)',
             'pitch average variation',
-            'salience mean',
             'salience stdev',
             'salience range',
-            'salience total',
-            'salience total variation'
+            'salience average variation'
         ]
         return feature_names
 
