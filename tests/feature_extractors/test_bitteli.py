@@ -55,14 +55,13 @@ class TestBitteliFeatures(unittest.TestCase):
         )
         expected = np.array([
             0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            3600.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            3600.0, 0.0, 0.0, 0.0, 0.0,
             0.0, 0.0,
-            0.5, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.5, 0.0, 0.0, 0.0, 0.0,
             0.0,
-            0.0, 1.0, 1.0,
-            3600.0, 0.0, 0.0, 0.0,
-            0.5, 0.0, 0.0,
-            1000, 0.0
+            0.0, 0.0, 1.0,
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0
         ])
         self.assertTrue(array_equal(expected, actual))
         self.assertEqual(len(actual), len(self.ftr.feature_names))
@@ -93,15 +92,12 @@ class TestBitteliFeatures(unittest.TestCase):
             'onset',
             'offset',
             'duration',
-            'pitch mean (cents)',
             'pitch stddev (cents)',
             'pitch range (cents)',
             'pitch average variation',
-            'salience mean',
             'salience stdev',
             'salience range',
-            'salience total',
-            'salience total variation'
+            'salience average variation'
         ]
         actual = self.ftr.feature_names
         self.assertEqual(expected, actual)
