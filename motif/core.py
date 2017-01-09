@@ -620,15 +620,17 @@ class ContourClassifier(six.with_metaclass(MetaContourClassifier)):
         raise NotImplementedError("This method must return a string identifier"
                                   " of the contour extraction type")
 
-    def score(self, predicted_scores, y_target):
+    def score(self, y_predicted, y_target, y_prob=None):
         """ Compute metrics on classifier predictions
 
         Parameters
         ----------
-        predicted_scores : np.array [n_samples]
-            predicted scores
+        y_predicted : np.array [n_samples]
+            Predicted class labels
         y_target : np.array [n_samples]
             Target class labels
+        y_prob : np.array [n_samples] or None, default=None
+            predicted probabilties. If None, auc is not computed
 
         Returns
         -------
@@ -637,7 +639,6 @@ class ContourClassifier(six.with_metaclass(MetaContourClassifier)):
             accuracy, matthews correlation coefficient, precision, recall, f1,
             support, confusion matrix, auc score
         """
-        y_predicted = 1 * (predicted_scores >= self.threshold)
         scores = {}
         scores['accuracy'] = metrics.accuracy_score(y_target, y_predicted)
         scores['mcc'] = metrics.matthews_corrcoef(y_target, y_predicted)
@@ -650,9 +651,10 @@ class ContourClassifier(six.with_metaclass(MetaContourClassifier)):
         scores['confusion matrix'] = metrics.confusion_matrix(
             y_target, y_predicted, labels=[0, 1]
         )
-        scores['auc score'] = metrics.roc_auc_score(
-            y_target, predicted_scores + 1, average='weighted'
-        )
+        if y_prob is not None:
+            scores['auc score'] = metrics.roc_auc_score(
+                y_target, y_prob + 1, average='weighted'
+            )
         return scores
 
 
