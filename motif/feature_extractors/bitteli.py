@@ -85,8 +85,6 @@ class BitteliFeatures(FeatureExtractor):
                 times - np.mean(times), salience, n_deg=self.poly_degree,
                 norm=False
             ),
-            utils.get_contour_onset(times),
-            utils.get_contour_offset(times),
             utils.get_contour_duration(times),
             utils.get_std(freqs_cents),
             utils.get_range(freqs_cents),
@@ -130,8 +128,6 @@ class BitteliFeatures(FeatureExtractor):
             '4th polynomial coeff - salience',
             '5th polynomial coeff - salience',
             'polynomial fit residual - salience',
-            'onset',
-            'offset',
             'duration',
             'pitch stddev (cents)',
             'pitch range (cents)',
