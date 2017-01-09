@@ -639,22 +639,36 @@ class ContourClassifier(six.with_metaclass(MetaContourClassifier)):
             accuracy, matthews correlation coefficient, precision, recall, f1,
             support, confusion matrix, auc score
         """
+        labels = set(y_target)
+        labels.update(y_predicted)
+        is_binary = len(labels) <= 2
+
         scores = {}
         scores['accuracy'] = metrics.accuracy_score(y_target, y_predicted)
-        scores['mcc'] = metrics.matthews_corrcoef(y_target, y_predicted)
+
+        if is_binary:
+            scores['mcc'] = metrics.matthews_corrcoef(y_target, y_predicted)
+        else:
+            scores['mcc'] = None
+
         (scores['precision'],
          scores['recall'],
          scores['f1'],
          scores['support']) = metrics.precision_recall_fscore_support(
              y_target, y_predicted
          )
+
         scores['confusion matrix'] = metrics.confusion_matrix(
-            y_target, y_predicted, labels=[0, 1]
+            y_target, y_predicted, labels=list(labels)
         )
+
         if y_prob is not None:
             scores['auc score'] = metrics.roc_auc_score(
                 y_target, y_prob + 1, average='weighted'
             )
+        else:
+            scores['auc score'] = None
+
         return scores
 
 
