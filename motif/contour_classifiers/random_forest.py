@@ -110,7 +110,7 @@ class RandomForest(ContourClassifier):
             Training labels
 
         """
-        x_shuffle, y_shuffle = shuffle(X, Y)
+        x_shuffle, y_shuffle = shuffle(X, Y, random_state=self.random_state)
         clf_cv = RFC(n_estimators=self.n_estimators, n_jobs=self.n_jobs,
                      class_weight=self.class_weight,
                      random_state=self.random_state)
@@ -125,7 +125,8 @@ class RandomForest(ContourClassifier):
 
         random_search = RandomizedSearchCV(
             clf_cv, param_distributions=param_dist, refit=True,
-            n_iter=self.n_iter_search, scoring='f1_weighted'
+            n_iter=self.n_iter_search, scoring='f1_weighted',
+            random_state=self.random_state
         )
         random_search.fit(x_shuffle, y_shuffle)
         self.clf = random_search.best_estimator_
