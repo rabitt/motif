@@ -188,7 +188,7 @@ def get_polynomial_fit_features(times, signal, n_deg=5, norm=False):
     poly_coeff, _, residual = _fit_poly(
         n_deg, signal, grid=times, norm=norm
     )
-    return np.concatenate([poly_coeff, [np.linalg.norm(residual)]])
+    return np.concatenate([poly_coeff.flatten(), [np.linalg.norm(residual)]])
 
 
 def _fit_poly(n_poly_degrees, signal, grid=None, norm=False):
@@ -387,6 +387,7 @@ def get_contour_shape_features(times, freqs, sample_rate, poly_degree=5,
     )
     # remove amplitude envelope using hilbert transform
     y_hilbert = np.abs(scipy.signal.hilbert(y_diff))
+    y_hilbert[y_hilbert == 0] = 1.0
     y_sin = y_diff / y_hilbert
 
     # get ideal vibrato parameters from resulting signal
