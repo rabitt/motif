@@ -55,7 +55,7 @@ class RandomForest(ContourClassifier):
         self.n_jobs = n_jobs
         self.class_weight = class_weight
         self.n_iter_search = n_iter_search
-        self.random_state = None
+        self.random_state = random_state
         self.clf = None
 
     def predict(self, X):
@@ -75,8 +75,29 @@ class RandomForest(ContourClassifier):
             raise ReferenceError(
                 "fit must be called before predict can be called"
             )
-        p_train = self.clf.predict_proba(X)[:, 1]
-        return p_train
+        p = self.clf.predict_proba(X)[:, 1]
+        return p
+
+
+    def predict_discrete_label(self, X):
+        """ Compute discrete class predictions.
+
+        Parameters
+        ----------
+        X : np.array [n_samples, n_features]
+            Features.
+
+        Returns
+        -------
+        Y_pred : np.array [n_samples]
+            predicted classes
+        """
+        if self.clf is None:
+            raise ReferenceError(
+                "fit must be called before predict can be called"
+            )
+        Y_pred = self.clf.predict(X)
+        return Y_pred
 
     def fit(self, X, Y):
         """ Train classifier.
