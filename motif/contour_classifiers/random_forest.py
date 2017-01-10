@@ -55,7 +55,7 @@ class RandomForest(ContourClassifier):
         self.n_jobs = n_jobs
         self.class_weight = class_weight
         self.n_iter_search = n_iter_search
-        self.random_state = None
+        self.random_state = random_state
         self.clf = None
 
     def predict(self, X):
@@ -75,8 +75,29 @@ class RandomForest(ContourClassifier):
             raise ReferenceError(
                 "fit must be called before predict can be called"
             )
-        p_train = self.clf.predict_proba(X)[:, 1]
-        return p_train
+        p = self.clf.predict_proba(X)[:, 1]
+        return p
+
+
+    def predict_discrete_label(self, X):
+        """ Compute discrete class predictions.
+
+        Parameters
+        ----------
+        X : np.array [n_samples, n_features]
+            Features.
+
+        Returns
+        -------
+        Y_pred : np.array [n_samples]
+            predicted classes
+        """
+        if self.clf is None:
+            raise ReferenceError(
+                "fit must be called before predict can be called"
+            )
+        Y_pred = self.clf.predict(X)
+        return Y_pred
 
     def fit(self, X, Y):
         """ Train classifier.
@@ -89,7 +110,7 @@ class RandomForest(ContourClassifier):
             Training labels
 
         """
-        x_shuffle, y_shuffle = shuffle(X, Y)
+        x_shuffle, y_shuffle = shuffle(X, Y, random_state=self.random_state)
         clf_cv = RFC(n_estimators=self.n_estimators, n_jobs=self.n_jobs,
                      class_weight=self.class_weight,
                      random_state=self.random_state)
@@ -104,7 +125,8 @@ class RandomForest(ContourClassifier):
 
         random_search = RandomizedSearchCV(
             clf_cv, param_distributions=param_dist, refit=True,
-            n_iter=self.n_iter_search, scoring='f1_weighted'
+            n_iter=self.n_iter_search, scoring='f1_weighted',
+            random_state=self.random_state
         )
         random_search.fit(x_shuffle, y_shuffle)
         self.clf = random_search.best_estimator_

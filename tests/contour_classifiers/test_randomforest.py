@@ -67,9 +67,26 @@ class TestRandomForest(unittest.TestCase):
         ])
         Y = np.array([0, 1, 0, 1, 0, 0, 1, 1, 0, 1])
         self.clf.fit(X, Y)
-        self.clf.predict(
+        actual = self.clf.predict(
             np.array([[1.0, 2.0], [1.0, 3.0], [-2.0, -2.0]])
         )
+        expected = np.array([0.0, 0.0, 1.0])
+        self.assertTrue(array_equal(actual, expected))
+
+    def test_predict_discrete_label(self):
+        X = np.array([
+            [1.0, 2.0], [0.0, 0.0], [0.5, 0.7],
+            [0.0, 0.0], [1.0, 2.5], [-1.0, 2.1],
+            [1.2, 1.2], [1.0, 1.0], [4.0, 0.0],
+            [-1.0, -1.0]
+        ])
+        Y = np.array([0, 1, 0, 1, 0, 0, 1, 1, 0, 1])
+        self.clf.fit(X, Y)
+        actual = self.clf.predict_discrete_label(
+            np.array([[1.0, 2.0], [1.0, 3.0], [-2.0, -2.0]])
+        )
+        expected = np.array([0, 0, 1])
+        self.assertTrue(array_equal(actual, expected))
 
     def test_threshold(self):
         expected = 0.5
@@ -83,6 +100,7 @@ class TestRandomForest(unittest.TestCase):
 
     def test_score(self):
         predicted_scores = np.array([0.0, 0.25, 1.0, 0.5, 0.9])
+        y_pred = np.array([0, 0, 1, 1, 1])
         y_target = np.array([0, 0, 1, 1, 1])
         expected = {
             'accuracy': 1.0,
@@ -94,7 +112,7 @@ class TestRandomForest(unittest.TestCase):
             'confusion matrix': np.array([[2, 0], [0, 3]]),
             'auc score': 1.0
         }
-        actual = self.clf.score(predicted_scores, y_target)
+        actual = self.clf.score(y_pred, y_target, y_prob=predicted_scores)
         self.assertEqual(expected['accuracy'], actual['accuracy'])
         self.assertAlmostEqual(expected['mcc'], actual['mcc'], places=1)
         self.assertTrue(

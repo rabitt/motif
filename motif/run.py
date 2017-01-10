@@ -22,8 +22,9 @@ def process(audio_files=None, training_pairs=None, testing_pairs=None,
         contour_classifier.fit(X_train, Y_train)
 
         # get training score
-        Y_pred = contour_classifier.predict(X_train)
-        train_scores = contour_classifier.score(Y_pred, Y_train)
+        Y_prob = contour_classifier.predict(X_train)
+        Y_pred = (np.array(Y_prob >= contour_classifier.threshold)).astype(int)
+        train_scores = contour_classifier.score(Y_pred, Y_train, y_prob=Y_prob)
 
     if testing_pairs is not None:
         X_test, Y_test, test_contours = process_with_labels(

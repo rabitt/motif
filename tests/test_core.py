@@ -438,6 +438,82 @@ class TestContourClassifier(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             self.clf.get_id()
 
+    def test_score_binary(self):
+        y_pred = np.array([0, 0, 1, 1])
+        y_target = np.array([1, 1, 1, 1])
+        actual_scores = self.clf.score(y_pred, y_target)
+        expected_scores = {
+            'accuracy': 0.5,
+            'auc score': None,
+            'confusion matrix': np.array([[0, 0], [2, 2]]),
+            'f1': np.array([0.0, 2.0/3.0]),
+            'mcc': 0.0,
+            'precision': np.array([0.0, 1.0]),
+            'recall': np.array([0.0, 0.5]),
+            'support': np.array([0, 4])
+        }
+        self.assertEqual(
+            sorted(actual_scores.keys()), sorted(expected_scores.keys())
+        )
+        for k in expected_scores.keys():
+            if expected_scores[k] is None or type(expected_scores[k]) == float:
+                self.assertEqual(expected_scores[k], actual_scores[k])
+            else:
+                self.assertTrue(
+                    array_equal(expected_scores[k], actual_scores[k])
+                )
+
+    def test_score_proba(self):
+        y_pred = np.array([0, 0, 1, 1])
+        y_target = np.array([0, 1, 1, 1])
+        y_pred_prob = np.array([0.1, 0.5, 0.8, 0.1])
+        actual_scores = self.clf.score(y_pred, y_target, y_prob=y_pred_prob)
+        expected_scores = {
+            'accuracy': 0.75,
+            'auc score': 5./6.,
+            'confusion matrix': np.array([[1, 0], [1, 2]]),
+            'f1': np.array([2.0/3.0, 0.8]),
+            'mcc': 0.57735026919,
+            'precision': np.array([0.5, 1.0]),
+            'recall': np.array([1.0, 2./3.]),
+            'support': np.array([1, 3])
+        }
+        self.assertEqual(
+            sorted(actual_scores.keys()), sorted(expected_scores.keys())
+        )
+        for k in expected_scores.keys():
+            if expected_scores[k] is None or type(expected_scores[k]) == float:
+                self.assertAlmostEqual(expected_scores[k], actual_scores[k])
+            else:
+                self.assertTrue(
+                    array_equal(expected_scores[k], actual_scores[k])
+                )
+
+    def test_score_multiclass(self):
+        y_pred = np.array([0, 0, 1, 2])
+        y_target = np.array([0, 2, 1, 1])
+        actual_scores = self.clf.score(y_pred, y_target)
+        expected_scores = {
+            'accuracy': 0.5,
+            'auc score': None,
+            'confusion matrix': np.array([[1, 0, 0], [0, 1, 1], [1, 0, 0]]),
+            'f1': np.array([2./3., 2.0/3.0, 0]),
+            'mcc': None,
+            'precision': np.array([0.5, 1.0, 0.0]),
+            'recall': np.array([1.0, 0.5, 0.0]),
+            'support': np.array([1, 2, 1])
+        }
+        self.assertEqual(
+            sorted(actual_scores.keys()), sorted(expected_scores.keys())
+        )
+        for k in expected_scores.keys():
+            if expected_scores[k] is None or type(expected_scores[k]) == float:
+                self.assertEqual(expected_scores[k], actual_scores[k])
+            else:
+                self.assertTrue(
+                    array_equal(expected_scores[k], actual_scores[k])
+                )
+
 
 class TestContourDecoderRegistry(unittest.TestCase):
 

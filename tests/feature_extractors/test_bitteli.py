@@ -58,9 +58,7 @@ class TestBitteliFeatures(unittest.TestCase):
             3600.0, 0.0, 0.0, 0.0, 0.0,
             0.0, 0.0,
             0.0, 0.5, 0.0, 0.0, 0.0, 0.0,
-            0.0,
-            0.0, 0.0, 1.0,
-            1.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
             0.0, 0.0, 0.0
         ])
         self.assertTrue(array_equal(expected, actual))
@@ -89,8 +87,6 @@ class TestBitteliFeatures(unittest.TestCase):
             '4th polynomial coeff - salience',
             '5th polynomial coeff - salience',
             'polynomial fit residual - salience',
-            'onset',
-            'offset',
             'duration',
             'pitch stddev (cents)',
             'pitch range (cents)',
