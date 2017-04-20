@@ -1,4 +1,4 @@
-""" Setup script for sox. """
+""" Setup script for motif. """
 from setuptools import setup
 
 import imp

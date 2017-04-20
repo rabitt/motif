@@ -558,13 +558,14 @@ class FeatureExtractor(six.with_metaclass(MetaFeatureExtractor)):
         """
         features = []
         for i in ctr.nums:
-            feature_vector = self.get_feature_vector(
-                ctr.contour_times(i),
-                ctr.contour_freqs(i),
-                ctr.contour_salience(i),
-                ctr.sample_rate
-            )
-            features.append(feature_vector)
+            if len(ctr.index_mapping[i]) > 0:
+                feature_vector = self.get_feature_vector(
+                    ctr.contour_times(i),
+                    ctr.contour_freqs(i),
+                    ctr.contour_salience(i),
+                    ctr.sample_rate
+                )
+                features.append(feature_vector)
 
         return np.array(features)
 

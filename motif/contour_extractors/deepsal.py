@@ -16,44 +16,16 @@ from motif.core import Contours
 from motif.contour_extractors import utils
 
 
-SALAMON_FPATH = "vamp_melodia-salience_melodia-salience_saliencefunction.csv"
-VAMP_PLUGIN = b"vamp:melodia-salience:melodia-salience:saliencefunction"
 
-
-def _check_binary():
-    '''Check if the vamp plugin is available and can be called.
-
-    Returns
-    -------
-    True if callable, False otherwise
-
-    '''
-    sonic_annotator_exists = True
-    try:
-        subprocess.check_output(['which', 'sonic-annotator'])
-    except CalledProcessError:
-        sonic_annotator_exists = False
-
-    if sonic_annotator_exists:
-        avail_plugins = subprocess.check_output(["sonic-annotator", "-l"])
-        if VAMP_PLUGIN in avail_plugins:
-            return True
-        else:
-            return False
-    else:
-        return False
-
-
-BINARY_AVAILABLE = _check_binary()
-
-
-class PeakStream(ContourExtractor):
+class DeepSal(ContourExtractor):
     '''Peak streaming based contour extraction as in [1]_
+    on a deep learned salience representation as in [2]_
 
     .. [1] Salamon, Justin and Gómez, Emilia, and Bonada, Jordi.
         "Sinusoid extraction and salience function design for predominant
         melody estimation." 14th International Conference on Digital Audio
         Effects (DAFX11), Paris, France, 2011.
+    .. [2]
 
     Parameters
     ----------
@@ -118,20 +90,24 @@ class PeakStream(ContourExtractor):
                  n_fft=8192, h_range=[1, 2, 3, 4, 5],
                  h_weights=[1, 0.5, 0.25, 0.25, 0.25],
                  interpolation_type='linear', pitch_cont=80, max_gap=0.01,
-                 amp_thresh=0.9, dev_thresh=0.9, preprocess=True,
-                 use_salamon_salience=False):
+                 amp_thresh=0.9, dev_thresh=0.9, preprocess=True):
         '''Init method.
         '''
 
-        self.max_freq = max_freq
+        # self.max_freq = max_freq
+        self.salience_sr = 22050
+        self.salience_hop = 256
+        self.salience_bins_per_octave = 60
+        self.salience_n_octaves = 6
+        self.salience_fmin = 32.7
 
-        # salience function parameters
-        self.hop_length = hop_length
-        self.win_length = win_length
-        self.n_fft = n_fft
-        self.h_range = h_range
-        self.h_weights = h_weights
-        self.interpolation_type = interpolation_type
+        # # salience function parameters
+        # self.hop_length = hop_length
+        # self.win_length = win_length
+        # self.n_fft = n_fft
+        # self.h_range = h_range
+        # self.h_weights = h_weights
+        # self.interpolation_type = interpolation_type
 
         # peak streaming parameters
         self.pitch_cont = pitch_cont
@@ -178,7 +154,7 @@ class PeakStream(ContourExtractor):
             Number of samples per second.
 
         """
-        return self.audio_samplerate / self.hop_length
+        return self.salience_sr / self.salience_hop
 
     @property
     def min_contour_len(self):
@@ -202,43 +178,42 @@ class PeakStream(ContourExtractor):
             Identifier of this extractor.
 
         """
-        return "peak_stream"
+        return "deepsal"
 
-    def compute_contours(self, audio_filepath):
-        """Compute contours as in Justin Salamon's melodia.
-        This calls a vamp plugin in the background, which creates a csv file.
-        The csv file is loaded into memory and the file is deleted.
+    def get_times(n_frames):
+        time_grid = librosa.core.frames_to_time(
+            range(n_frames), sr=self.salience_sr, hop_length=self.salience_hop
+        )
+        return time_grid
+
+    def get_freqs():
+        freq_grid = librosa.cqt_frequencies(
+            self.salience_bins_per_octave*self.salience_n_octaves,
+            self.salience_fmin, bins_per_octave=self.salience_bins_per_octave
+        )
+        return freq_grid
+
+    def compute_contours(self, salience_npy_file):
+        """Compute contours by peak streaming a salience output.
 
         Parameters
         ----------
-        audio_filepath : str
-            Path to audio file.
+        salience_npy_file : str
+            Path to precomputed salience numpy file.
 
         Returns
         -------
         Instance of Contours object
 
         """
-        if not os.path.exists(audio_filepath):
+        if not os.path.exists(salience_npy_file):
             raise IOError(
-                "The audio file {} does not exist".format(audio_filepath)
+                "The numpy file {} does not exist".format(salience_npy_file)
             )
 
-        if self.preprocess:
-            fpath = self._preprocess_audio(
-                audio_filepath, normalize_format=True,
-                normalize_volume=True
-            )
-        else:
-            fpath = audio_filepath
-
-
-        print("Computing salience...")
-        if self.use_salamon_salience:
-            times, freqs, S = self._compute_salience_salamon(fpath)
-        else:
-            y, sr = librosa.load(fpath, sr=self.audio_samplerate)
-            times, freqs, S = self._compute_salience(y, sr)
+        S = np.load(salience_npy_file)
+        times = self.get_times(S.shape[1])
+        freqs = self.get_freqs()
 
         psh = utils.PeakStreamHelper(
             S, times, freqs, self.amp_thresh, self.dev_thresh, self.n_gap,
@@ -259,100 +234,4 @@ class PeakStream(ContourExtractor):
             c_numbers, c_times, c_freqs, c_sal, self.sample_rate,
             audio_filepath
         )
-
-    def _compute_salience(self, y, sr):
-        """Computes salience function from audio signal using librosa's
-        salience function.
-
-        Parameters
-        ----------
-        y : np.array
-            Audio signal
-        sr : float
-            Audio sample rate
-
-        Returns
-        -------
-        times : np.array
-            Array of times in seconds
-        freqs : np.array
-            Array of frequencies in Hz
-        salience : np.array
-            Salience matrix of shape (len(freqs), len(times))
-
-        """
-        # compute stft
-        S = librosa.core.stft(y, n_fft=self.n_fft, hop_length=self.hop_length)
-        freqs = librosa.core.fft_frequencies(sr=sr, n_fft=self.n_fft)
-        times = librosa.core.frames_to_time(
-            np.arange(0, S.shape[1]), sr, hop_length=self.hop_length,
-            n_fft=self.n_fft
-        )
-
-        # discard unneeded frequencies
-        max_sal_freq = np.max(self.h_range) * self.max_freq
-        max_sal_freq_index = np.argmin(np.abs(freqs - max_sal_freq))
-        freqs_reduced = freqs[:max_sal_freq_index]
-
-        S_sal = librosa.harmonic.salience(
-            np.abs(S[:max_sal_freq_index, :]), freqs_reduced,
-            self.h_range, weights=self.h_weights, kind=self.interpolation_type,
-            filter_peaks=True, fill_value=0.0
-        )
-
-        max_freq_index = np.argmin(np.abs(freqs_reduced - self.max_freq))
-        return times, freqs_reduced[:max_freq_index], S_sal[:max_freq_index, :]
-
-    def _compute_salience_salamon(self, fpath):
-        """Computes salience function from audio signal using melodia's
-        salience function.
-
-        Parameters
-        ----------
-        fpath : str
-            Path to audio file.
-
-        Returns
-        -------
-        times : np.array
-            Array of times in seconds
-        freqs : np.array
-            Array of frequencies in Hz
-        salience : np.array
-            Salience matrix of shape (len(freqs), len(times))
-
-        """
-        if not BINARY_AVAILABLE:
-            raise EnvironmentError(
-                "Either the vamp plugin {} needed to compute these contours or "
-                "sonic-annotator is not available.".format(VAMP_PLUGIN)
-            )
-
-        f_dir = os.path.dirname(fpath)
-        f_name = os.path.basename(fpath)
-        fpath_out = os.path.join(
-            f_dir,
-            "{}_{}".format(f_name.split('.')[0], SALAMON_FPATH)
-        )
-        if os.path.exists(fpath_out):
-            os.remove(fpath_out)
-
-        binary_call = [
-            "sonic-annotator", "-d",
-            "vamp:melodia-salience:melodia-salience:saliencefunction",
-            fpath, "-w", "csv", "--csv-force"
-        ]
-        os.system(" ".join(binary_call))
-        if not os.path.exists(fpath_out):
-            raise IOError("output file does not exist")
-        else:
-            S_sal = np.loadtxt(fpath_out, dtype=float, delimiter=',')
-            S_sal = (S_sal / np.max(S_sal, axis=0)).T
-            times = librosa.core.frames_to_time(
-                np.arange(0, S_sal.shape[1]), 44100, hop_length=128
-            )
-            freqs = 55.0 * np.power(2.0, (np.arange(0, 601)) / 120.0)
-            os.remove(fpath_out)
-        return times, freqs, S_sal
-
 
