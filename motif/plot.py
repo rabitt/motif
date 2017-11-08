@@ -26,13 +26,13 @@ def plot_with_annotation(ctr, annotation_fpath, single_f0=True):
     '''
     if single_f0:
         ref_times, ref_freqs = load_annotation(
-            annotation_fpath, n_freqs=1, to_array=False
+            annotation_fpath, n_freqs=1, to_array=False, rm_zeros=True
         )
-        ref_freqs = [f if f[0] != 0 else np.array([]) for f in ref_freqs]
+        # ref_freqs = [f if f[0] != 0 else np.array([]) for f in ref_freqs]
 
     else:
         ref_times, ref_freqs = load_annotation(
-            annotation_fpath, n_freqs=None, to_array=False
+            annotation_fpath, n_freqs=None, to_array=False, rm_zeros=True
         )
 
     r_times = []
@@ -43,14 +43,14 @@ def plot_with_annotation(ctr, annotation_fpath, single_f0=True):
 
     # plot annotation
     plt.semilogy(
-        np.array(r_times), np.array(r_freqs), 'ok', basey=2, markersize=5
+        r_times, r_freqs, 'ok', basey=2, markersize=6
     )
 
     # plot contours
-    c1 = sns.color_palette('deep', 1)[0]
+    c1 = sns.color_palette('bright', 4)[2]
     for i in ctr.nums:
         plt.semilogy(ctr.contour_times(i), ctr.contour_freqs(i),
-                     basey=2, markersize=2)
+                     basey=2, markersize=2, color=c1)
 
     plt.xlabel('Time (sec)')
     plt.ylabel('Frequency (Hz)')
