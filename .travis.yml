@@ -20,6 +20,7 @@ addons:
   apt:
     packages:
     - sox
+    - llvm
 
 before_install:
     # - sudo cp motif/contour_extractors/resources/hll /usr/local/bin/
