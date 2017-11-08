@@ -8,13 +8,10 @@ from mir_eval.melody import hz2cents
 import numpy as np
 import os
 import scipy.signal
-import subprocess
-from subprocess import CalledProcessError
 
 from motif.core import ContourExtractor
 from motif.core import Contours
 from motif.contour_extractors import utils
-
 
 
 class DeepSal(ContourExtractor):
@@ -29,94 +26,54 @@ class DeepSal(ContourExtractor):
 
     Parameters
     ----------
-    hop_length : int, default=128
-        Number of samples between frames.
-    win_length : int, default=2048
-        The window size in samples.
-    n_fft : int, default=8192
-        The fft size in samples.
-    h_range : list, default=[1, 2, 3, 4, 5]
-        The list of harmonics to use in salience function.
-    h_weights : list, default=[1, 0.5, 0.25, 0.25, 0.25]
-        The list of weights to apply to each harmonic in salience function.
     pitch_cont : float, default=80
         Pitch continuity threshold in cents.
     max_gap : float, default=0.01
         Threshold (in seconds) for how many values can be taken from S-.
-    amp_thresh : float, default=0.9
-        Threshold on how big a peak must be relative to the maximum in its
-        frame.
-    dev_thresh : float, default=0.9
-        The maximum number of standard deviations below the mean a peak can
-        be to survive.
-    preprocess : bool, default=True
-        If true, normalizes the volume and format of the audio before
-        processing. Otherwise computes contours from original audio.
+    min_contour_freq : float, default=32.7
+        Minimum contour frequency value
+    max_contour_freq : float, default=3000.0
+        Max contour frequency value
+    peak_thresh : float, default=0.3
+        Threshold between 0 and 1 to separate good peaks from bad peaks
+    low_amp_thresh : float, default=0.005
+        Threshold below which salience values are discarded from consideration
 
     Attributes
     ----------
-    max_freq : float
-        The maximum frequency allowed in a contour in Hz.
-    hop_length : int
-        Number of samples between frames.
-    win_length : int
-        The window size in samples.
-    n_fft : int
-        The fft size in samples.
-    h_range : list
-        The list of harmonics to use in salience function.
-    h_weights : list
-        The list of weights to apply to each harmonic in salience function.
-    interpolation_type : str
-        Frequency interpolation type. See scipy.signal.interp1d for details.
     pitch_cont : float
         Pitch continuity threshold in cents.
     max_gap : float
         Threshold (in seconds) for how many values can be taken from S-.
-    amp_thresh : float
-        Threshold on how big a peak must be relative to the maximum in its
-        frame.
-    dev_thresh : float
-        The maximum number of standard deviations below the mean a peak can
-        be to survive.
-    preprocess : bool
-        If true, normalizes the volume and format of the audio before
-        processing. Otherwise computes contours from original audio.
-    use_salamon_salience : bool
-        If true, uses salamon vamp plugin to compute salience.
+    min_contour_freq : float
+        Minimum contour frequency value
+    max_contour_freq : float
+        Max contour frequency value
+    peak_thresh : float
+        Threshold between 0 and 1 to separate good peaks from bad peaks
+    low_amp_thresh : float
+        Threshold below which salience values are discarded from consideration
 
     '''
-    def __init__(self, max_freq=3000.0, hop_length=128, win_length=2048,
-                 n_fft=8192, h_range=[1, 2, 3, 4, 5],
-                 h_weights=[1, 0.5, 0.25, 0.25, 0.25],
-                 interpolation_type='linear', pitch_cont=80, max_gap=0.01,
-                 amp_thresh=0.9, dev_thresh=0.9, preprocess=True):
+    def __init__(self, pitch_cont=80, max_gap=0.2, min_contour_freq=32.7,
+                 max_contour_freq=3000.0, peak_thresh=0.3,
+                 low_amp_thresh=0.005):
         '''Init method.
         '''
-
-        # self.max_freq = max_freq
         self.salience_sr = 22050
         self.salience_hop = 256
         self.salience_bins_per_octave = 60
         self.salience_n_octaves = 6
         self.salience_fmin = 32.7
 
-        # # salience function parameters
-        # self.hop_length = hop_length
-        # self.win_length = win_length
-        # self.n_fft = n_fft
-        # self.h_range = h_range
-        # self.h_weights = h_weights
-        # self.interpolation_type = interpolation_type
+        self.min_contour_freq = min_contour_freq
+        self.max_contour_freq = max_contour_freq
 
         # peak streaming parameters
         self.pitch_cont = pitch_cont
         self.max_gap = max_gap
-        self.amp_thresh = amp_thresh
-        self.dev_thresh = dev_thresh
-
-        self.preprocess = preprocess
-        self.use_salamon_salience = use_salamon_salience
+        self.peak_thresh = peak_thresh
+        self.low_amp_thresh = low_amp_thresh
 
         ContourExtractor.__init__(self)
 
@@ -166,7 +123,7 @@ class DeepSal(ContourExtractor):
             Minimum allowed contour length in seconds.
 
         """
-        return 0.1
+        return 0.05
 
     @classmethod
     def get_id(cls):
@@ -180,20 +137,20 @@ class DeepSal(ContourExtractor):
         """
         return "deepsal"
 
-    def get_times(n_frames):
+    def get_times(self, n_frames):
         time_grid = librosa.core.frames_to_time(
             range(n_frames), sr=self.salience_sr, hop_length=self.salience_hop
         )
         return time_grid
 
-    def get_freqs():
+    def get_freqs(self):
         freq_grid = librosa.cqt_frequencies(
-            self.salience_bins_per_octave*self.salience_n_octaves,
+            self.salience_bins_per_octave * self.salience_n_octaves,
             self.salience_fmin, bins_per_octave=self.salience_bins_per_octave
         )
         return freq_grid
 
-    def compute_contours(self, salience_npy_file):
+    def compute_contours(self, salience_npy_file, audio_duration):
         """Compute contours by peak streaming a salience output.
 
         Parameters
@@ -212,12 +169,15 @@ class DeepSal(ContourExtractor):
             )
 
         S = np.load(salience_npy_file)
+        S[S < self.low_amp_thresh] = 0.0
         times = self.get_times(S.shape[1])
         freqs = self.get_freqs()
+        S[freqs < self.min_contour_freq, :] = 0
+        S[freqs > self.max_contour_freq, :] = 0
 
         psh = utils.PeakStreamHelper(
-            S, times, freqs, self.amp_thresh, self.dev_thresh, self.n_gap,
-            self.pitch_cont
+            S, times, freqs, 0, 0, self.n_gap,
+            self.pitch_cont, peak_thresh=self.peak_thresh
         )
 
         c_numbers, c_times, c_freqs, c_sal = psh.peak_streaming()
@@ -232,6 +192,5 @@ class DeepSal(ContourExtractor):
 
         return Contours(
             c_numbers, c_times, c_freqs, c_sal, self.sample_rate,
-            audio_filepath
+            audio_duration=audio_duration
         )
-
