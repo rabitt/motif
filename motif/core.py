@@ -46,7 +46,7 @@ class Contours(object):
 
     '''
     def __init__(self, index, times, freqs, salience, sample_rate,
-                 audio_filepath):
+                 audio_filepath=None, audio_duration=None):
         '''
         Parameters
         ----------
@@ -60,13 +60,16 @@ class Contours(object):
             Array of contour saliences
         sample_rate : float
             Contour sample rate.
-        audio_filepath : str
+        audio_filepath : str or None
             Path to audio file contours were extracted from
 
         '''
         validate_contours(index, times, freqs, salience)
-        if not os.path.exists(audio_filepath):
+        if audio_filepath is not None and not os.path.exists(audio_filepath):
             raise IOError("audio_filepath does not exist.")
+        elif audio_filepath is None and audio_duration is None:
+            raise ValueError(
+                "one of audio_filepath or audio_duration must be set.")
 
         # contour attributes
         self.index = index
@@ -75,6 +78,7 @@ class Contours(object):
         self.salience = self._set_salience(salience)
         self.sample_rate = sample_rate
         self.audio_filepath = audio_filepath
+        self.audio_duration = audio_duration
 
         self.nums = self._compute_nums()
         self.index_mapping = self._compute_index_mapping()
@@ -129,7 +133,10 @@ class Contours(object):
         duration : float
             Audio file duration
         '''
-        return sox.file_info.duration(self.audio_filepath)
+        if self.audio_duration is not None:
+            return self.audio_duration
+        else:
+            return sox.file_info.duration(self.audio_filepath)
 
     def _compute_uniform_times(self):
         '''Compute array of uniform time stamps at the sample rate
@@ -140,7 +147,7 @@ class Contours(object):
             Array of uniform time stamps at the sample rate
         '''
         n_stamps = int(np.ceil(self.duration * self.sample_rate)) + 1
-        uniform_times = np.arange(0, n_stamps) / self.sample_rate
+        uniform_times = np.arange(0, n_stamps) / float(self.sample_rate)
         return uniform_times
 
     def contour_times(self, index):
@@ -188,7 +195,7 @@ class Contours(object):
         '''
         return self.salience[self.index_mapping[index]]
 
-    def compute_labels(self, annotation_fpath, overlap_threshold=0.5):
+    def compute_labels(self, annotation_fpath, overlap_threshold=0.5, single_f0=True):
         '''Compute overlaps with an annotation and labels for each contour.
 
         Parameters
@@ -200,7 +207,11 @@ class Contours(object):
             be labeled as a positive example; between 0 and 1.
 
         '''
-        annot_times, annot_freqs = load_annotation(annotation_fpath)
+        if single_f0:
+            annot_times, annot_freqs = load_annotation(annotation_fpath)
+        else:
+            raise NotImplementedError
+
         ref_cent, ref_voicing = format_annotation(
             self.uniform_times, annot_times, annot_freqs
         )
@@ -270,13 +281,12 @@ class Contours(object):
         est_times, est_freqs = self.to_multif0_format()
         if single_f0:
             ref_times, ref_freqs = load_annotation(
-                annotation_fpath, n_freqs=1, to_array=False
+                annotation_fpath, n_freqs=1, to_array=False, rm_zeros=True
             )
-            ref_freqs = [f if f[0] != 0 else np.array([]) for f in ref_freqs]
 
         else:
             ref_times, ref_freqs = load_annotation(
-                annotation_fpath, n_freqs=None, to_array=False
+                annotation_fpath, n_freqs=None, to_array=False, rm_zeros=True
             )
 
         scores = multipitch.evaluate(
@@ -386,15 +396,15 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
         raise NotImplementedError("This method must return a string identifier"
                                   " of the contour extraction type")
 
-    def compute_contours(self, audio_filepath):
-        """Method for computing features for given audio file"""
+    def compute_contours(self, input_filepath):
+        """Method for computing features for given file"""
         raise NotImplementedError("This method must contain the actual "
                                   "implementation of the contour extraction")
 
     def _preprocess_audio(self, audio_filepath, normalize_format=True,
                           normalize_volume=True, hpss=False,
                           equal_loudness_filter=False):
-        '''Preprocess the audio before computing contours
+        '''Preprocess audio before computing contours
 
         Parameters
         ----------
@@ -495,6 +505,7 @@ class ContourExtractor(six.with_metaclass(MetaContourExtractor)):
             index[sort_idx], times[sort_idx], freqs[sort_idx],
             salience[sort_idx]
         )
+
 
 ###############################################################################
 FEATURE_EXTRACTOR_REGISTRY = {}  # All available classifiers
@@ -707,6 +718,13 @@ class ContourDecoder(six.with_metaclass(MetaContourDecoder)):
             An instance of a Contours object
         Y : np.array [n_contours]
             Predicted contour scores.
+
+        Returns
+        -------
+        times : np.ndarray
+            Array of time stamps
+        freqs : np.ndarray
+            Array of f0 values in Hz
 
         """
         raise NotImplementedError("This method must contain the actual "

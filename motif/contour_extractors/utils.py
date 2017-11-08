@@ -1,9 +1,11 @@
 import numpy as np
+from mir_eval.melody import hz2cents
+import scipy.signal
 
 class PeakStreamHelper(object):
 
     def __init__(self, S, times, freqs, amp_thresh, dev_thresh, n_gap,
-                 pitch_cont):
+                 pitch_cont, peak_thresh=None):
         '''Init method.
 
         Parameters
@@ -24,6 +26,9 @@ class PeakStreamHelper(object):
             Number of frames that can be taken from bad_peaks.
         pitch_cont : float
             Pitch continuity threshold in cents.
+        peak_thresh : float or None
+            threshold on peaks to separate good and bad peaks.
+            If set, peaks are split by threshold.
 
         '''
         self.S = S
@@ -36,6 +41,11 @@ class PeakStreamHelper(object):
         self.dev_thresh = dev_thresh
         self.n_gap = n_gap
         self.pitch_cont = pitch_cont
+        self.peak_thresh = peak_thresh
+        if self.peak_thresh is None:
+            self.split_method = 'stats'
+        else:
+            self.split_method = 'thresh'
 
         peaks = scipy.signal.argrelmax(S, axis=0)
         self.n_peaks = len(peaks[0])
@@ -129,21 +139,29 @@ class PeakStreamHelper(object):
         good_peaks = set(self.peak_index)
         bad_peaks = set()
 
-        # peaks with amplitude below a threshold --> bad peaks
-        bad_peak_idx = np.where(self.peak_amps_norm < self.amp_thresh)[0]
-        bad_peaks.update(bad_peak_idx)
+        if self.split_method == 'stats':
+            # peaks with amplitude below a threshold --> bad peaks
+            bad_peak_idx = np.where(self.peak_amps_norm < self.amp_thresh)[0]
+            bad_peaks.update(bad_peak_idx)
 
-        # find indices of surviving peaks
-        good_peaks.difference_update(bad_peaks)
+            # find indices of surviving peaks
+            good_peaks.difference_update(bad_peaks)
 
-        # compute mean and standard deviation of amplitudes of survivors
-        mean_peak = np.mean(self.peak_amps[bad_peak_idx])
-        std_peak = np.std(self.peak_amps[bad_peak_idx])
+            # compute mean and standard deviation of amplitudes of survivors
+            mean_peak = np.mean(self.peak_amps[bad_peak_idx])
+            std_peak = np.std(self.peak_amps[bad_peak_idx])
 
-        # peaks with amplitude too far below the mean --> bad peaks
-        bad_peaks.update(np.where(
-            self.peak_amps < (mean_peak - (self.dev_thresh * std_peak)))[0])
-        good_peaks.difference_update(bad_peaks)
+            # peaks with amplitude too far below the mean --> bad peaks
+            bad_peaks.update(np.where(
+                self.peak_amps < (
+                    mean_peak - (self.dev_thresh * std_peak)))[0])
+            good_peaks.difference_update(bad_peaks)
+        elif self.split_method == 'thresh':
+            bad_peak_idx = np.where(self.peak_amps < self.peak_thresh)[0]
+            bad_peaks.update(bad_peak_idx)
+            good_peaks.difference_update(bad_peaks)
+        else:
+            raise ValueError("invalid split method")
 
         return good_peaks, bad_peaks
 
@@ -248,6 +266,8 @@ class PeakStreamHelper(object):
 
         # find candidates in time frame
         all_cands = self.frame_dict[frame_idx]
+        if len(all_cands) == 0:
+            return None, None
 
         # restrict to frames that satisfy pitch continuity
         all_cands = set(all_cands[

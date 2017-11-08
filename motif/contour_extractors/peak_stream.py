@@ -4,10 +4,9 @@
 from __future__ import print_function
 
 import librosa
-from mir_eval.melody import hz2cents
 import numpy as np
 import os
-import scipy.signal
+# import scipy.signal
 import subprocess
 from subprocess import CalledProcessError
 
@@ -232,7 +231,6 @@ class PeakStream(ContourExtractor):
         else:
             fpath = audio_filepath
 
-
         print("Computing salience...")
         if self.use_salamon_salience:
             times, freqs, S = self._compute_salience_salamon(fpath)
@@ -242,7 +240,7 @@ class PeakStream(ContourExtractor):
 
         psh = utils.PeakStreamHelper(
             S, times, freqs, self.amp_thresh, self.dev_thresh, self.n_gap,
-            self.pitch_cont
+            self.pitch_cont, peak_thresh=None
         )
 
         c_numbers, c_times, c_freqs, c_sal = psh.peak_streaming()

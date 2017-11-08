@@ -29,24 +29,35 @@ class TestContours(unittest.TestCase):
         self.freqs = np.array([440.0, 441.0, 50.0, 52.0, 55.0, 325.2])
         self.salience = np.array([0.2, 0.4, 0.5, 0.2, 0.4, 0.0])
         self.sample_rate = 10.0
-        self.audio_fpath = AUDIO_FILE
+        self.audio_filepath = AUDIO_FILE
         self.ctr = core.Contours(
             self.index, self.times, self.freqs, self.salience,
-            self.sample_rate, self.audio_fpath
+            self.sample_rate, audio_filepath=self.audio_filepath
+        )
+        self.ctr2 = core.Contours(
+            self.index, self.times, self.freqs, self.salience,
+            self.sample_rate, audio_duration=5.0
         )
 
     def test_invalid_contours(self):
         with self.assertRaises(ValueError):
             core.Contours(
                 self.index, self.times, self.freqs[:-1], self.salience,
-                self.sample_rate, self.audio_fpath
+                self.sample_rate, audio_filepath=self.audio_filepath
             )
 
     def test_invalid_filepath(self):
         with self.assertRaises(IOError):
             core.Contours(
                 self.index, self.times, self.freqs, self.salience,
-                self.sample_rate, 'not/a/file.wav'
+                self.sample_rate, audio_filepath='not/a/file.wav'
+            )
+
+    def test_invalid_audio(self):
+        with self.assertRaises(ValueError):
+            core.Contours(
+                self.index, self.times, self.freqs, self.salience,
+                self.sample_rate, audio_filepath=None, audio_duration=None
             )
 
     def test_index(self):
@@ -75,7 +86,7 @@ class TestContours(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_filepath(self):
-        expected = self.audio_fpath
+        expected = self.audio_filepath
         actual = self.ctr.audio_filepath
         self.assertEqual(expected, actual)
 
@@ -92,6 +103,11 @@ class TestContours(unittest.TestCase):
     def test_duration(self):
         expected = 3.0
         actual = self.ctr.duration
+        self.assertEqual(expected, actual)
+
+    def test_duration2(self):
+        expected = 5.0
+        actual = self.ctr2.duration
         self.assertEqual(expected, actual)
 
     def test_uniform_times(self):
@@ -237,10 +253,10 @@ class TestContours2(unittest.TestCase):
         self.freqs = np.array([440.0, 441.0, 50.0, 52.0, 55.0, 325.2])
         self.salience = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         self.sample_rate = 10.0
-        self.audio_fpath = AUDIO_FILE
+        self.audio_filepath = AUDIO_FILE
         self.ctr = core.Contours(
             self.index, self.times, self.freqs, self.salience,
-            self.sample_rate, self.audio_fpath
+            self.sample_rate, self.audio_filepath
         )
 
     def test_salience(self):
@@ -258,7 +274,8 @@ class TestExtractorRegistry(unittest.TestCase):
 
     def test_keys(self):
         actual = sorted(core.CONTOUR_EXTRACTOR_REGISTRY.keys())
-        expected = sorted(['hll', 'salamon', 'peak_stream', '__test__'])
+        expected = sorted(
+            ['deepsal', 'hll', 'salamon', 'peak_stream', '__test__'])
         self.assertEqual(expected, actual)
 
     def test_types(self):
