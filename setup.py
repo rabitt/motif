@@ -40,7 +40,7 @@ if __name__ == "__main__":
             'scikit-learn >= 0.17.0',
             'matplotlib',
             'seaborn',
-            'librosa == 0.5.0.dev0',
+	    'librosa >= 0.5.0',
             'mir_eval >= 0.4.0',
             'sox'
         ],
