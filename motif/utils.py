@@ -110,7 +110,8 @@ def get_snippet_idx(snippet, full_array):
     return idx
 
 
-def load_annotation(annotation_fpath, n_freqs=1, to_array=True, rm_zeros=False):
+def load_annotation(annotation_fpath, n_freqs=1, to_array=True,
+                    rm_zeros=False, delimiter=','):
     """ Load an annotation from a csv file.
 
     Parameters
