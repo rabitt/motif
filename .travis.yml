@@ -32,7 +32,7 @@ before_install:
 # command to install dependencies
 install:
   - pip install coveralls
-  - pip install git+https://github.com/librosa/librosa.git
+  - conda install -c conda-forge librosa
   - pip install -e .
   - pip install mock
 
