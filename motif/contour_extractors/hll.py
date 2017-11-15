@@ -381,8 +381,7 @@ class HLL(ContourExtractor):
         cqt = np.abs(librosa.cqt(
             y, sr=sr, hop_length=self.hop_size, fmin=fmin,
             filter_scale=self.filter_scale,
-            bins_per_octave=bins_per_octave, n_bins=n_cqt_bins,
-            real=False
+            bins_per_octave=bins_per_octave, n_bins=n_cqt_bins
         ))
 
         cqt = self._norm_matrix(cqt)

@@ -110,7 +110,8 @@ def get_snippet_idx(snippet, full_array):
     return idx
 
 
-def load_annotation(annotation_fpath, n_freqs=1, to_array=True):
+def load_annotation(annotation_fpath, n_freqs=1, to_array=True,
+                    rm_zeros=False, delimiter=','):
     """ Load an annotation from a csv file.
 
     Parameters
@@ -141,7 +142,11 @@ def load_annotation(annotation_fpath, n_freqs=1, to_array=True):
         reader = csv.reader(fhandle, delimiter=',')
         for row in reader:
             annot_times.append(row[0])
-            annot_freqs.append([r for r in row[1:end_idx]])
+            if rm_zeros:
+                temp_freqs = [r for r in row[1:end_idx] if float(r) > 0]
+            else:
+                temp_freqs = [r for r in row[1:end_idx]]
+            annot_freqs.append(temp_freqs)
 
     annot_times = np.array(annot_times, dtype=float)
     annot_freqs = [np.array(f).astype(float) for f in annot_freqs]
